@@ -4,50 +4,54 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LT Test">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f6b4f">
+<meta name="theme-color" content="#4f46e5">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 /* Layout: one narrow phone column. Tag numbers look like engraved traffolyte labels. */
 :root{
-  --bg:#eef1ee; --surface:#ffffff; --ink:#15201b; --muted:#5a6862; --line:#d3dad5;
-  --label:#f1b81f; --label-ink:#111; --accent:#0f6b4f; --on-accent:#ffffff; --danger:#b3261e;
-  --display:"Barlow Condensed","Arial Narrow","Helvetica Neue",system-ui,sans-serif;
-  --body:"Barlow",-apple-system,system-ui,"Segoe UI",sans-serif;
+  --bg:#f2f3f7; --surface:#ffffff; --ink:#111827; --muted:#6b7280; --line:#e6e8ee;
+  --label:#f5c02a; --label-ink:#111; --accent:#4f46e5; --accent2:#7c3aed; --on-accent:#ffffff; --danger:#dc2626;
+  --hero1:#4f46e5; --hero2:#7c3aed; --shadow:0 1px 2px rgba(17,24,39,.05),0 4px 14px rgba(17,24,39,.06);
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#101614; --surface:#18201d; --ink:#e6ece8; --muted:#94a39c; --line:#2b3632;
-  --label:#f3bd30; --label-ink:#111; --accent:#4fc59a; --on-accent:#08130f; --danger:#f2867d; color-scheme:dark}}
+  --bg:#0b0d12; --surface:#161a22; --ink:#eef0f4; --muted:#9aa3b2; --line:#262c38;
+  --label:#f5c02a; --label-ink:#111; --accent:#8b8cff; --accent2:#a78bfa; --on-accent:#0b0d12; --danger:#f87171;
+  --hero1:#4338ca; --hero2:#6d28d9; --shadow:none; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#101614; --surface:#18201d; --ink:#e6ece8; --muted:#94a39c; --line:#2b3632;
-  --label:#f3bd30; --label-ink:#111; --accent:#4fc59a; --on-accent:#08130f; --danger:#f2867d; color-scheme:dark}
+  --bg:#0b0d12; --surface:#161a22; --ink:#eef0f4; --muted:#9aa3b2; --line:#262c38;
+  --label:#f5c02a; --label-ink:#111; --accent:#8b8cff; --accent2:#a78bfa; --on-accent:#0b0d12; --danger:#f87171;
+  --hero1:#4338ca; --hero2:#6d28d9; --shadow:none; color-scheme:dark}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink);margin:0}
 body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(48px + env(safe-area-inset-bottom,0px))}
+  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(104px + env(safe-area-inset-bottom,0px))}
 .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;display:flex;align-items:center;gap:8px;cursor:pointer;background:none;border:0;color:var(--ink);padding:0;white-space:nowrap}
-.brand svg{width:22px;height:22px}
-h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;text-wrap:balance;line-height:1.1}
-h1{font-size:30px} h2{font-size:22px}
-h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:var(--body);font-weight:600}
+.brand{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:0;color:var(--ink);padding:0;white-space:nowrap}
+.appicon{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,var(--hero1),var(--hero2));color:#fff;display:grid;place-items:center;flex:0 0 auto;box-shadow:0 3px 10px -3px rgba(79,70,229,.6)}
+.appicon svg{width:20px;height:20px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;text-wrap:balance;line-height:1.15;letter-spacing:-.015em}
+h1{font-size:28px;font-weight:800} h2{font-size:21px}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-family:var(--body);font-weight:600}
 p{margin:0}
 .muted{color:var(--muted)} .note{font-size:14px;color:var(--muted)}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .code{font-family:var(--mono);font-weight:700;background:var(--label);color:var(--label-ink);padding:2px 8px;border-radius:3px;letter-spacing:.06em;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);white-space:nowrap;display:inline-block;font-variant-numeric:tabular-nums}
 .code.lg{font-size:22px;padding:4px 12px}
 .lookup{display:flex;gap:8px}
 .lookup input{flex:1;min-width:0;font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.12em;padding:12px 14px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .lookup input:focus{outline:none;border-color:var(--accent)}
-button,.btn{font:600 16px var(--body);border-radius:8px;padding:12px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;text-align:center}
+button,.btn{font:600 16px var(--body);border-radius:12px;padding:12px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;text-align:center}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 button.danger{color:var(--danger)}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-within{outline:3px solid var(--label);outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-within{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:2px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .row>*{flex:1 1 140px}
 .supply{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -81,7 +85,7 @@ label.f textarea{min-height:64px;resize:vertical}
 .badge{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
 .newtag{display:flex;gap:12px;align-items:center;background:var(--label);color:var(--label-ink);border-radius:8px;padding:12px}
 .newtag b{font-family:var(--mono);font-size:22px}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;max-width:calc(100% - 32px);z-index:30}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));border-radius:12px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;max-width:calc(100% - 32px);z-index:30}
 #viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:40;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
 #viewer img{max-height:100%;max-width:100%;object-fit:contain}
 .back{align-self:flex-start;padding:6px 10px;font-size:14px}
@@ -112,21 +116,40 @@ label.f textarea{min-height:64px;resize:vertical}
 .idphoto img{width:100%;max-height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
 /* friendly home + view-only / editing mode */
 button>svg,.btn>svg{width:18px;height:18px;flex:0 0 auto}
-.hero{border-top:4px solid var(--accent)}
-.hello{font-size:14px;font-weight:600;color:var(--accent)}
-button.big{font-size:20px;padding:18px 16px;border-radius:12px}
+.hero{background:linear-gradient(140deg,var(--hero1),var(--hero2));border:0;color:#fff;box-shadow:0 14px 30px -14px rgba(79,70,229,.7)}
+.hero h1,.hero h2{color:#fff}
+.hero .note{color:rgba(255,255,255,.85)}
+.hello{font-size:14px;font-weight:600;color:rgba(255,255,255,.8)}
+button.big{font-size:19px;padding:17px 16px;border-radius:14px}
+.hero button.big{background:#fff;border-color:#fff;color:#4338ca;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
 button.big svg{width:26px;height:26px}
 .lookup input::placeholder{font-family:var(--body);font-weight:400;letter-spacing:0;font-size:17px}
-.hero .lookup input{font-size:22px;letter-spacing:.06em}
+.hero .lookup input{font:500 17px var(--body);letter-spacing:0;background:#fff;color:#111827;border-color:transparent;border-radius:12px}
+.hero .lookup input::placeholder{color:#6b7280}
+.hero .lookup button{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff}
+.hero #results{background:var(--surface);color:var(--ink);border-radius:12px;padding:0 12px}
 .lookup button svg{width:20px;height:20px}
-.stats{display:flex;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
-.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;font-weight:400;min-width:0}
+.stat b{font-family:var(--display);font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;padding:16px;gap:4px;border-radius:12px;min-height:118px;min-width:0}
-.tile svg{width:28px;height:28px;color:var(--accent);margin-bottom:4px}
-.tile b{font-family:var(--display);font-size:21px;line-height:1.1}
+.tile{flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;padding:16px;gap:2px;border-radius:18px;min-height:128px;min-width:0;box-shadow:var(--shadow)}
+.ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.ic svg{width:22px;height:22px}
+.tile .ic{margin-bottom:8px;color:var(--c)}
+.tile b{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.2}
 .tile span{font-size:13px;font-weight:400;color:var(--muted)}
-.tile.lock svg{color:var(--muted)}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:end;
+  background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line);
+  padding:6px max(8px,calc((100% - 560px)/2)) calc(6px + env(safe-area-inset-bottom,0px))}
+.tabbar button{background:none;border:0;border-radius:10px;flex-direction:column;gap:3px;padding:6px 0;font-size:11px;font-weight:600;color:var(--muted)}
+.tabbar button svg{width:24px;height:24px}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+.tabbar .fab{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;color:#fff;margin-top:-28px;background:linear-gradient(140deg,var(--hero1),var(--hero2));box-shadow:0 8px 18px -6px rgba(79,70,229,.7)}
+.tabbar .fab svg{width:28px;height:28px}
 .mode{padding:6px 12px;font-size:14px;border-radius:999px;gap:6px;white-space:nowrap}
 .mode svg{width:16px;height:16px}
 .mode[data-state="edit"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
@@ -143,13 +166,14 @@ button.big svg{width:26px;height:26px}
 <div class="wrap">
   <header class="top">
     <button class="brand" id="home-btn" aria-label="Home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>
+      <span class="appicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg></span>
       Light Tracer <span class="badge" style="background:var(--label);color:var(--label-ink);border-color:var(--label)">TEST</span>
     </button>
     <button class="mode" id="mode-btn"></button>
   </header>
   <main id="app" class="wrap" style="padding:0;width:100%"></main>
 </div>
+<nav class="tabbar" id="tabbar" aria-label="Main"></nav>
 <div id="lock" hidden>
   <form class="panel" id="lock-form" role="dialog" aria-modal="true" aria-labelledby="lock-title">
     <h2 id="lock-title">Unlock editing</h2>
@@ -705,9 +729,19 @@ const ICON={
   lock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`),
   unlock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>`),
   share:svgI(`<path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/>`),
+  home:svgI(`<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>`),
+  more:svgI(`<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>`),
   gear:svgI(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>`)
 };
+const TAB={home:"home",boards:"boards",board:"boards",editBoard:"boards",types:"types",type:"types",editType:"types",identify:"types",more:"more",make:"more",data:"more",settings:"more"};
+function renderTabs(){
+  const cur=TAB[view.name]||"", t=(id,icon,label)=>`<button data-go="${id}"${cur===id?` aria-current="page"`:""}>${icon}<span>${label}</span></button>`;
+  $("#tabbar").innerHTML=t("home",ICON.home,"Home")+t("boards",ICON.board,"Boards")
+    +`<button id="tab-scan" aria-label="Scan a tag"><span class="fab">${ICON.qr}</span><span>Scan</span></button>`
+    +t("types",ICON.types,"Types")+t("more",ICON.more,"More");
+}
 function renderHeader(){
+  renderTabs();
   const b=$("#mode-btn");
   if(!AUTH){ b.dataset.state="open"; b.innerHTML=`${ICON.gear} Settings`; b.setAttribute("aria-label","Settings and editor password"); }
   else if(unlocked){ b.dataset.state="edit"; b.innerHTML=`${ICON.unlock} Editing · Lock`; b.setAttribute("aria-label","Editing is on. Tap to lock"); }
@@ -739,26 +773,28 @@ home(){
   const recent=[...DB.lights].sort((a,b)=>(b.history.at(-1)?.d||"").localeCompare(a.history.at(-1)?.d||"")).slice(0,6);
   const unlinked=DB.lights.filter(l=>!board(l.board));
   const hr=new Date().getHours(), hello=hr<12?"Good morning":hr<18?"Good afternoon":"Good evening";
-  const tile=(attr,icon,title,sub,cls="")=>`<button class="tile${cls}" ${attr}>${icon}<b>${title}</b><span>${sub}</span></button>`;
+  const tile=(attr,icon,c,title,sub)=>`<button class="tile" ${attr}><span class="ic" style="--c:${c}">${icon}</span><b>${title}</b><span>${sub}</span></button>`;
   const tiles=[
-    tile(`id="identify"`,ICON.camera,"Which driver?","Snap a light to match its type"),
-    tile(`data-go="boards"`,ICON.board,"Boards",plural(DB.boards.length,"board")),
-    tile(`data-go="types"`,ICON.types,"Fitting types",plural(DB.types.length,"type")),
+    tile(`id="identify"`,ICON.camera,"#2563eb","Which driver?","Snap a light to match its type"),
     ...(can()?[
-      tile(`data-go="make"`,ICON.tag,"Make QR tags","New numbers, never repeated"),
-      tile(`data-go="data"`,ICON.backup,"Share &amp; backup","Send records to another phone"),
-      tile(`data-go="settings"`,ICON.key,"Password",AUTH?"Change or remove":"Not set yet")
-    ]:[ tile(`id="unlock"`,ICON.lock,"Unlock editing","Add, change or delete"," lock") ])
+      tile(`data-go="make"`,ICON.tag,"#ea580c","Make QR tags","New numbers, never repeated"),
+      tile(`data-go="data"`,ICON.backup,"#0d9488","Share &amp; backup","Send records to another phone"),
+      tile(`data-go="settings"`,ICON.key,"#db2777","Password",AUTH?"Change or remove":"Not set yet")
+    ]:[ tile(`id="unlock"`,ICON.lock,"#64748b","Unlock editing","Add, change or delete") ])
   ];
   return `
   <section class="panel hero">
     <p class="hello">${hello}</p>
     <h1>Find a light or board</h1>
-    <button class="primary big" id="scan">${ICON.qr} Scan a tag</button>
+    <button class="big" id="scan">${ICON.qr} Scan a tag</button>
     <form class="lookup" id="lookup-form" role="search"><input id="lookup" type="search" autocomplete="off" placeholder="Tag no., board or place" aria-label="Tag number or search"><button aria-label="Find">${ICON.search}</button></form>
     <div class="list" id="results" hidden></div>
-    <div class="stats"><span><b>${DB.lights.length}</b> lights</span>·<span><b>${DB.boards.length}</b> boards</span>·<span><b>${DB.types.length}</b> fitting types</span></div>
   </section>
+  <div class="stats">
+    <div class="stat"><b>${DB.lights.length}</b><span>Lights</span></div>
+    <button class="stat" data-go="boards"><b>${DB.boards.length}</b><span>Boards</span></button>
+    <button class="stat" data-go="types"><b>${DB.types.length}</b><span>Fitting types</span></button>
+  </div>
   ${AUTH&&!can()?`<p class="locknote">${ICON.lock}<span>View only. You can scan, search and look things up. Unlock to make changes.</span></p>`:""}
   <div class="tiles">${tiles.join("")}</div>
   ${!AUTH?`<section class="panel"><h3>Protect your records</h3><p class="note">Right now anyone using this phone can change or delete records. Set an editor password and everyone else gets view-only access.</p><button data-go="settings">${ICON.key} Set a password</button></section>`:""}
@@ -767,6 +803,15 @@ home(){
   <section class="panel"><h3>Recently worked on</h3>
     <div class="list">${recent.map(lightItem).join("")||`<div class="empty">No lights tagged yet. Scan a blank tag to start.</div>`}</div>
   </section>`;
+},
+more(){
+  const row=(attr,icon,c,title,sub)=>`<button class="item" ${attr}><span class="ic" style="--c:${c}">${icon}</span><span class="t"><b>${title}</b><span>${sub}</span></span><span class="cb">›</span></button>`;
+  return `<section class="panel"><h2>More</h2><div class="list">
+    ${row(`data-go="make"`,ICON.tag,"#ea580c","Make QR tags","New numbers, never repeated")}
+    ${row(`data-go="data"`,ICON.backup,"#0d9488","Share &amp; backup","Send records to another phone")}
+    ${row(`data-go="settings"`,ICON.key,"#db2777","Password",AUTH?"Change or remove":"Not set yet")}
+    ${AUTH?(unlocked?row(`id="lock-now"`,ICON.lock,"#64748b","Lock editing","Back to view only"):row(`id="unlock"`,ICON.unlock,"#64748b","Unlock editing","Add, change or delete")):""}
+  </div></section>`;
 },
 boards(){
   return `${back()}
@@ -1283,6 +1328,8 @@ document.addEventListener("click",async e=>{
     case "home-btn": return go("home");
     case "mode-btn": return !AUTH ? go("settings") : unlocked ? lockNow() : askUnlock(()=>render());
     case "unlock": return askUnlock(()=>render());
+    case "tab-scan": return scan();
+    case "lock-now": return lockNow();
     case "lock-cancel": return closeLock();
     case "pw-remove": {
       if(!checkPw($("#pw-off").value)) return toast("That password isn't right.");
