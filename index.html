@@ -983,6 +983,7 @@ qr(code){
   <section class="panel">
     <h2>Replacement tag ${esc(code)}</h2>
     <p class="muted">Use this if the tag on ${isB?"the board":"the light"} has gone missing or been painted over.</p>
+    ${labelSection()}<h3>Or print on A4 paper</h3>
     ${printButtons()}
   </section>
   <section class="panel big" id="print-area">${sheetHTML(+code,1)}</section>`;
@@ -997,7 +998,7 @@ make(){
     <button class="primary" id="m-get">${ICON.tag} Get new tag numbers</button>
     <p class="note">Needs internet. Once you get numbers they're used for good, even if you don't print them.</p>
   </section>
-  ${B?`<section class="panel hero" id="m-batch"><h2>Tags ${B.first} to ${B.first+B.count-1}</h2><p class="note">These numbers are yours. Print them now, or reprint later from "Your tag batches".</p>${printButtons()}</section>
+  ${B?`<section class="panel hero" id="m-batch"><h2>Tags ${B.first} to ${B.first+B.count-1}</h2><p class="note">These numbers are yours. Print them now, or reprint later from "Your tag batches".</p>${labelSection()}<h3>Or print on A4 paper</h3>${printButtons()}</section>
   <section class="panel" id="print-area"></section>`:""}
   ${mine.length?`<section class="panel"><h3>Your tag batches</h3><p class="note">Numbers this phone has got. Tap one to print it again, for example if a sheet got lost.</p>
     <div class="list">${mine.map(b=>`<button class="item" data-reprint="${b.first}:${b.last-b.first+1}"><span class="code">${b.first}</span><span class="t"><b>${b.first} to ${b.last}</b><span>${plural(b.last-b.first+1,"tag")}</span></span><span class="cb">${fmtDate(b.d)}</span></button>`).join("")}</div></section>`:""}`;
@@ -1037,7 +1038,7 @@ function linkBoard(code){
   if(light(code)) return toast(`${code} is a light tag. Scan the tag on the board.`);
   toast(`${code} isn't set up as a board yet. Tap "Save, link later", then set up that board.`);
 }
-function render(){ renderHeader(); $("#app").innerHTML=V[view.name](view.arg); if(view.name==="make") updateSheet(); }
+function render(){ renderHeader(); $("#app").innerHTML=V[view.name](view.arg); if(view.name==="make") updateSheet(); fillLabels(); }
 function refreshPhotos(key){ const el=$("#ph-"+key); if(el) el.innerHTML=photos(draft[key],key,{edit:true}); }
 
 /* ---------- search ---------- */
@@ -1148,6 +1149,40 @@ function sheetHTML(start,count){
   let h=`<div class="sheet">`;
   for(let n=start;n<start+count;n++) h+=`<div class="tagl">${QR.svg(qrText(n))}<span class="n">${n}</span></div>`;
   return h+`</div>`;
+}
+/* ---------- Brother P-touch labels (PT-P710BT via Design&Print 2) ----------
+   One picture per tag: QR code on the left, the number on the right, black on white, sized for the tape height.
+   The QR holds just the number, which keeps it to the smallest, chunkiest QR size, so it scans well on 24 mm tape. */
+function labelCanvas(n){
+  const q=QR.encode(String(n)), m=10, quiet=3, H=(q.size+quiet*2)*m, txt=String(n);
+  const c=document.createElement("canvas"), g=c.getContext("2d"), font=`bold ${Math.round(H*0.52)}px "Courier New", Courier, monospace`;
+  g.font=font; const tw=Math.ceil(g.measureText(txt).width);
+  c.width=H+tw+Math.round(H*0.22); c.height=H;
+  g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.fillStyle="#000";
+  for(let y=0;y<q.size;y++) for(let x=0;x<q.size;x++) if(q.dark(x,y)) g.fillRect((x+quiet)*m,(y+quiet)*m,m,m);
+  g.font=font; g.textBaseline="middle"; g.fillText(txt,H,H/2+H*0.03);
+  return c;
+}
+const CAN_SHARE_PNG=(()=>{ try{ return !FRAMED && !!navigator.canShare && navigator.canShare({files:[new File(["x"],"t.png",{type:"image/png"})]}); }catch{ return false; } })();
+function labelSection(){
+  const [s,c]=sheetRange();
+  return `<div class="sub"><b>Brother label printer</b>
+    <p class="note">${plural(c,"label picture")} sized for 24 mm tape (18 mm works too). ${CAN_SHARE_PNG?"Tap Save labels, then Save Images to put them in Photos.":"Press and hold a label below and choose Save to Photos."}
+    Then in Design&amp;Print 2, start a label on your tape, add an image from Photos, and print.</p>
+    ${CAN_SHARE_PNG?`<button class="primary" id="lbl-share">${ICON.share} Save labels to Photos</button>`:""}
+    <div id="lbl-preview" style="display:flex;flex-direction:column;gap:6px"></div></div>`;
+}
+function fillLabels(){
+  const el=$("#lbl-preview"); if(!el) return;
+  const [s,c]=sheetRange(), show=CAN_SHARE_PNG?Math.min(c,6):c;
+  el.innerHTML=Array.from({length:show},(_,i)=>`<img src="${labelCanvas(s+i).toDataURL("image/png")}" alt="Label ${s+i}" style="height:56px;width:auto;align-self:flex-start;border:1px solid var(--line);border-radius:4px;background:#fff">`).join("")
+    +(c>show?`<p class="note">…and ${c-show} more. Save labels puts all ${c} in Photos.</p>`:"");
+}
+async function shareLabels(){
+  const [s,c]=sheetRange(), files=[];
+  for(let i=0;i<c;i++){ const b=await new Promise(r=>labelCanvas(s+i).toBlob(r,"image/png")); files.push(new File([b],`tag-${s+i}.png`,{type:"image/png"})); }
+  try{ await navigator.share({files}); }
+  catch(e){ if(e?.name!=="AbortError") toast("Couldn't open sharing. Press and hold a label to save it instead."); }
 }
 function printButtons(){
   return `<div class="row"><button class="primary" id="dl-pdf">Download PDF</button>${CAN_SHARE?`<button id="share-pdf">Email or share</button>`:""}${FRAMED?"":`<button id="print">Print</button>`}</div>
@@ -1271,6 +1306,7 @@ document.addEventListener("click",async e=>{
     case "print": markPrinted(); window.print(); return;
     case "dl-pdf": return downloadPDF();
     case "share-pdf": return sharePDF();
+    case "lbl-share": return shareLabels();
     case "clear-ex":
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to clear"; return; }
       { const now=Date.now(), del={...DB.deleted}; DB.lights.forEach(l=>del[l.code]=now); DB.boards.forEach(b=>del[b.code]=now); DB.types.forEach(x=>del["type:"+x.id]=now);
