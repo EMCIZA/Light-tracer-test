@@ -1,5 +1,5 @@
 // Caches the app on first visit so it opens with no internet afterwards.
-const C="light-tracer-test-v1";
+const C="light-tracer-test-v2";
 const FILES=["./","./index.html","./manifest.json","./icon-180.png","./icon-192.png","./icon-512.png",
  "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>Promise.all(FILES.map(f=>c.add(new Request(f,{mode:f.startsWith("http")?"no-cors":"same-origin"})).catch(()=>{}))))));

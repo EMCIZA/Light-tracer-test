@@ -543,7 +543,15 @@ function idb(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open("lig
 async function loadKV(key){ try{ const db=await idb(); return await new Promise(res=>{ const q=db.transaction("kv").objectStore("kv").get(key); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }); }catch{ return null; } }
 async function putKV(key,val){ try{ const db=await idb(); const s=db.transaction("kv","readwrite").objectStore("kv"); val==null?s.delete(key):s.put(val,key); }catch{} }
 const loadData = () => loadKV("data");
+/* every record carries u = when it last changed on any phone; merges use it to pick the newer copy.
+   save() spots changed records by comparing a cheap signature (long photo strings shortened). */
+const sig = r => JSON.stringify(r,(k,v)=>k==="u"?undefined:(typeof v==="string"&&v.length>200?v.length+":"+v.slice(-24):v));
+const recs = d => [...d.lights.map(r=>["L"+r.code,r]),...d.boards.map(r=>["B"+r.code,r]),...d.types.map(r=>["T"+r.id,r])];
+let SNAP=new Map();
+function resnap(){ SNAP=new Map(recs(DB).map(([k,r])=>[k,sig(r)])); }
 async function save(){
+  const now=Date.now();
+  for(const [k,r] of recs(DB)){ const g=sig(r); if(SNAP.get(k)!==g){ r.u=now; SNAP.set(k,g); } }
   await putKV("data",DB);
   featCache.size>300&&featCache.clear();
 }
@@ -618,7 +626,7 @@ function migrate(d){
   out.lastPrinted=Math.max(out.lastPrinted,next-1);
   return out;
 }
-function tidy(d){ d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
+function tidy(d){ d.deleted=d.deleted||{}; d.boards.forEach(b=>{ b.photos=b.photos||[]; }); d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
 const board = c => DB.boards.find(b=>b.code===c);
 const light = c => DB.lights.find(l=>l.code===c);
 const ftype = id => DB.types.find(t=>t.id===id);
@@ -687,6 +695,7 @@ const ICON={
   key:svgI(`<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>`),
   lock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`),
   unlock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>`),
+  share:svgI(`<path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/>`),
   gear:svgI(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>`)
 };
 function renderHeader(){
@@ -728,7 +737,7 @@ home(){
     tile(`data-go="types"`,ICON.types,"Fitting types",plural(DB.types.length,"type")),
     ...(can()?[
       tile(`data-go="make"`,ICON.tag,"Make QR tags","Print blank tags"),
-      tile(`data-go="data"`,ICON.backup,"Backup","Save or restore records"),
+      tile(`data-go="data"`,ICON.backup,"Share &amp; backup","Send records to another phone"),
       tile(`data-go="settings"`,ICON.key,"Password",AUTH?"Change or remove":"Not set yet")
     ]:[ tile(`id="unlock"`,ICON.lock,"Unlock editing","Add, change or delete"," lock") ])
   ];
@@ -979,18 +988,26 @@ make(){
       <label class="f">How many (40 per page)<select id="m-count">${[20,40,80,120].map(n=>`<option ${n===40?"selected":""}>${n}</option>`).join("")}</select></label>
     </div>
     <p class="note" id="m-warn"></p>
+    <p class="note">Printing tags on more than one phone? Share and merge records first, so the numbers carry on from each other and don't repeat.</p>
     ${printButtons()}
   </section>
   <section class="panel" id="print-area"></section>`;
 },
 data(){
-  const n=DB.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos.length+t.driverPhotos.length,0)+DB.boards.reduce((a,b)=>a+b.photos.length,0);
+  const n=photoCount(DB);
   return `${back()}
-  <section class="panel"><h2>Backup &amp; restore</h2>
-  <p class="muted">Everything is stored on this phone only. Save a backup now and then, and use it to move the records to another phone.</p>
-  <button class="primary" id="export">Save backup file</button>
-  <label class="btn">Restore from backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
-  <p class="note">${DB.lights.length} lights, ${DB.boards.length} boards, ${n} photos stored.</p></section>`;
+  ${IMP?importPanel():""}
+  ${REPORT?reportPanel():""}
+  <section class="panel"><h2>Share your records</h2>
+  <p class="muted">Everything is stored on this phone only. To give another phone your records, send it a backup file. On that phone, open Share &amp; backup and tap "Choose backup file".</p>
+  <p class="note">On this phone: ${plural(DB.lights.length,"light")}, ${plural(DB.boards.length,"board")}, ${plural(DB.types.length,"fitting type")}, ${plural(n,"photo")}.</p>
+  ${CAN_SHARE_JSON?`<button class="primary" id="share-backup">${ICON.share} Share backup</button>`:""}
+  <button ${CAN_SHARE_JSON?"":`class="primary" `}id="export">${ICON.backup} Save backup file</button>
+  </section>
+  <section class="panel"><h2>Add from a backup file</h2>
+  <p class="muted">Pick a backup file from another phone. You'll see what's in it before anything changes.</p>
+  <label class="btn">Choose backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
+  </section>`;
 }
 };
 function linkArea(){
@@ -1038,6 +1055,75 @@ function showResults(){
 
 /* ---------- QR tag sheets ---------- */
 const FRAMED=(()=>{ try{ return window.self!==window.top; }catch{ return true; } })();
+const CAN_SHARE_JSON=(()=>{ try{ return !FRAMED && !!navigator.canShare && navigator.canShare({files:[new File(["x"],"b.json",{type:"application/json"})]}); }catch{ return false; } })();
+const photoCount = d => d.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos.length+t.driverPhotos.length,0)+d.boards.reduce((a,b)=>a+b.photos.length,0)+d.types.reduce((a,x)=>a+x.photos.length+x.driverPhotos.length,0);
+const backupName = () => `light-tracer-backup-${today()}.json`;
+const backupBlob = () => new Blob([JSON.stringify({...DB,savedAt:new Date().toISOString()})],{type:"application/json"});
+let IMP=null, REPORT=null;
+function importPanel(){
+  const d=IMP.data, n=photoCount(d), when=d.savedAt?new Date(d.savedAt).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"";
+  return `<section class="panel hero" id="imp"><h2>What's in this file</h2>
+  <div class="supply"><div><div class="k">Lights</div><div class="v">${d.lights.length}</div></div><div><div class="k">Boards</div><div class="v">${d.boards.length}</div></div>
+    <div><div class="k">Fitting types</div><div class="v">${d.types.length}</div></div><div><div class="k">Photos</div><div class="v">${n}</div></div>
+    ${when?`<div class="wide"><div class="k">Saved</div><div class="v small">${esc(when)}</div></div>`:""}</div>
+  <p class="note"><b>Merge</b> adds new records and updates ones changed more recently on the other phone. Photos and job history from both are kept. Records deleted on the other phone are deleted here too.</p>
+  <button class="primary" id="imp-merge">Merge into this phone</button>
+  <p class="note"><b>Replace</b> deletes everything on this phone (${plural(DB.lights.length,"light")}, ${plural(DB.boards.length,"board")}, ${plural(photoCount(DB),"photo")}) and uses the file instead.</p>
+  <div class="row"><button id="imp-cancel">Cancel</button><button class="danger" id="imp-replace">Replace everything</button></div></section>`;
+}
+function reportPanel(){
+  const r=REPORT;
+  return `<section class="panel hero"><h2>Merged</h2>
+  <p>${plural(r.added,"record")} added, ${r.updated} updated, ${r.removed} removed.</p>
+  ${r.conflicts.length?`<h3>Check these tags</h3><p class="note">The same number is on something different in the file. These were left as they are on this phone. Two tags may have been printed with the same number.</p>
+    <div class="hist">${r.conflicts.map(c=>`<div><span class="code">${esc(c.code)}</span><span>${esc(c.why)}</span></div>`).join("")}</div>`:""}
+  <button id="report-ok">Done</button></section>`;
+}
+const same = (a,b) => String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
+/* combine two copies of one record: the newer copy's details win, photos and job history from both are kept */
+function mergeRec(L,R,photoKeys){
+  const before=sig(L), keep={};
+  photoKeys.forEach(k=>keep[k]=[...new Set([...(L[k]||[]),...(R[k]||[])])]);
+  if(L.history||R.history){ const m=new Map(); [...(L.history||[]),...(R.history||[])].forEach(h=>m.set(h.d+"|"+h.t,h)); keep.history=[...m.values()].sort((a,b)=>a.d.localeCompare(b.d)); }
+  const u=Math.max(L.u||0,R.u||0);
+  if((R.u||0)>(L.u||0)) Object.assign(L,R);
+  Object.assign(L,keep); L.u=u;
+  return sig(L)!==before;
+}
+function mergeData(inc){
+  const r={added:0,updated:0,removed:0,conflicts:[]};
+  const tomb={...inc.deleted}; for(const [k,v] of Object.entries(DB.deleted)) tomb[k]=Math.max(tomb[k]||0,v);
+  const gone=(key,rec)=>(tomb[key]||0)>=(rec.u||0)&&!!tomb[key];
+  // fitting types: same id, or same name, count as the same type
+  const typeMap={};
+  for(const T of inc.types){
+    const L=ftype(T.id)||(T.name.trim()&&DB.types.find(x=>same(x.name,T.name)));
+    if(L){ typeMap[T.id]=L.id; if(mergeRec(L,{...T,id:L.id},["photos","driverPhotos"])) r.updated++; }
+    else if(!gone("type:"+T.id,T)){ DB.types.push(T); r.added++; }
+  }
+  for(const R of inc.boards){
+    const c=R.code, L=board(c);
+    if(light(c)){ r.conflicts.push({code:c,why:`A board in the file ("${R.name}"), but a light here.`}); continue; }
+    if(!L){ if(!gone(c,R)){ DB.boards.push(R); r.added++; } continue; }
+    if(R.name&&L.name&&!same(R.name,L.name)){ r.conflicts.push({code:c,why:`Board "${R.name}" in the file, "${L.name}" here.`}); continue; }
+    if(mergeRec(L,R,["photos"])) r.updated++;
+  }
+  for(const R0 of inc.lights){
+    const R={...R0,type:typeMap[R0.type]||R0.type}, c=R.code, L=light(c);
+    if(board(c)){ r.conflicts.push({code:c,why:`A light in the file (${R.location||"no location"}), but a board here.`}); continue; }
+    if(!L){ if(!gone(c,R)){ DB.lights.push(R); r.added++; } continue; }
+    if(L.board&&R.board&&L.board!==R.board&&L.location&&R.location&&!same(L.location,R.location)){ r.conflicts.push({code:c,why:`"${R.location}" in the file, "${L.location}" here.`}); continue; }
+    if(mergeRec(L,R,["cbPhotos","lightPhotos","driverPhotos"])) r.updated++;
+  }
+  // deletions made on either phone
+  const n0=DB.lights.length+DB.boards.length+DB.types.length;
+  DB.lights=DB.lights.filter(l=>!gone(l.code,l)); DB.boards=DB.boards.filter(b=>!gone(b.code,b));
+  const tn=DB.types.length; DB.types=DB.types.filter(x=>!gone("type:"+x.id,x));
+  if(DB.types.length<tn) DB.lights.forEach(l=>{ if(l.type&&!ftype(l.type)) l.type=""; });
+  r.removed=n0-(DB.lights.length+DB.boards.length+DB.types.length);
+  DB.deleted=tomb; DB.lastPrinted=Math.max(DB.lastPrinted||0,inc.lastPrinted||0); DB.example=!!(DB.example&&inc.example);
+  return r;
+}
 const CAN_SHARE=(()=>{ try{ return !FRAMED && !!navigator.canShare && navigator.canShare({files:[new File(["x"],"t.pdf",{type:"application/pdf"})]}); }catch{ return false; } })();
 const qrText = n => "LIGHT TRACER "+n;
 function nextNumber(){ return Math.max(1000, DB.lastPrinted||0, ...DB.lights.map(t=>+t.code||0), ...DB.boards.map(b=>+b.code||0)) + 1; }
@@ -1142,7 +1228,7 @@ document.addEventListener("click",async e=>{
     case "learn-no": idState=null; return render();
     case "del-type": {
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to delete"; return; }
-      DB.lights.forEach(l=>{ if(l.type===view.arg) l.type=""; }); DB.types=DB.types.filter(x=>x.id!==view.arg); await save(); toast("Fitting type deleted"); return go("home");
+      DB.lights.forEach(l=>{ if(l.type===view.arg) l.type=""; }); DB.types=DB.types.filter(x=>x.id!==view.arg); DB.deleted["type:"+view.arg]=Date.now(); await save(); toast("Fitting type deleted"); return go("home");
     }
     case "scan-cancel": return stopScan();
     case "scan-photo": { const c=scanCallback; stopScan(); return photoScan(c); }
@@ -1156,20 +1242,32 @@ document.addEventListener("click",async e=>{
     case "share-pdf": return sharePDF();
     case "clear-ex":
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to clear"; return; }
-      DB={v:3,boards:[],lights:[],types:[],lastPrinted:DB.lastPrinted}; await save(); toast("Example data cleared"); return go("home");
+      { const now=Date.now(), del={...DB.deleted}; DB.lights.forEach(l=>del[l.code]=now); DB.boards.forEach(b=>del[b.code]=now); DB.types.forEach(x=>del["type:"+x.id]=now);
+        DB={v:3,boards:[],lights:[],types:[],deleted:del,lastPrinted:DB.lastPrinted}; } await save(); toast("Example data cleared"); return go("home");
     case "del": {
       if(view.name==="board"){ const n=DB.lights.filter(l=>l.board===view.arg).length; if(n){ toast(`${n} light${n>1?"s are":" is"} linked to this board. Link ${n>1?"them":"it"} to another board or delete ${n>1?"them":"it"} first.`); return; } }
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to delete"; return; }
       if(view.name==="board") DB.boards=DB.boards.filter(b=>b.code!==view.arg); else DB.lights=DB.lights.filter(l=>l.code!==view.arg);
+      DB.deleted[view.arg]=Date.now();
       await save(); toast(`Tag ${view.arg} deleted. It's blank again.`); return go("home");
     }
+    case "share-backup":
+      try{ await navigator.share({files:[new File([backupBlob()],backupName(),{type:"application/json"})],title:"Light Tracer backup"}); }
+      catch(e){ if(e?.name!=="AbortError") toast("Couldn't open sharing. Use Save backup file instead."); }
+      return;
+    case "imp-cancel": IMP=null; return render();
+    case "report-ok": REPORT=null; return render();
+    case "imp-merge": { REPORT=mergeData(IMP.data); IMP=null; resnap(); await save(); toast("Merged"); render(); return window.scrollTo(0,0); }
+    case "imp-replace":
+      if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to replace"; return; }
+      DB=IMP.data; IMP=null; REPORT=null; resnap(); await save(); toast("Replaced with the backup"); return go("home");
     case "export":
-      try{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:"application/json"})); a.download=`light-tracer-backup-${today()}.json`; a.click(); toast("Backup saved to your Files"); }
+      try{ const a=document.createElement("a"); a.href=URL.createObjectURL(backupBlob()); a.download=backupName(); a.click(); toast("Backup saved to your Files"); }
       catch{ toast("Couldn't save a backup here. Use the installed app."); }
   }
 });
 /* buttons that change records; they're hidden when locked, this is the backstop */
-const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export"]);
+const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hidden) closeLock(); $("#viewer").hidden=true; } });
@@ -1249,14 +1347,14 @@ document.addEventListener("change",async e=>{
     t.value="";
   }
   if(t.id==="import" && t.files[0]){
-    try{ const j=tidy(migrate(JSON.parse(await t.files[0].text()))); if(!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0; DB=j; await save(); toast("Backup restored"); go("home"); }
+    try{ const j=JSON.parse(await t.files[0].text()); if(!j||!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0; IMP={data:tidy(migrate(j))}; REPORT=null; render(); $("#imp")?.scrollIntoView({block:"start"}); }
     catch{ toast("That file isn't a Light Tracer backup."); }
   }
 });
 
 (async()=>{
   AUTH=await loadKV("auth");
-  DB=tidy(migrate(await loadData())||seed()); await save(); render();
+  DB=tidy(migrate(await loadData())||seed()); resnap(); await save(); render();
   try{ navigator.storage?.persist?.(); }catch{}
   try{ if("serviceWorker" in navigator && location.protocol==="https:" && !/claude/.test(location.hostname)) navigator.serviceWorker.register("sw.js"); }catch{}
 })();
