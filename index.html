@@ -557,7 +557,7 @@ const Match=(()=>{
 </script>
 <script>
 /* App version: bump with every published change, so phones can be compared at a glance. */
-const APP_VERSION="0.15", APP_DATE="2026-11-06", APP_CHANNEL="Test";
+const APP_VERSION="0.16", APP_DATE="2026-11-06", APP_CHANNEL="Test";
 const versionText = () => `Version ${APP_VERSION}${APP_CHANNEL?` (${APP_CHANNEL.toLowerCase()})`:""} · ${fmtDate(APP_DATE)}`;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1149,17 +1149,19 @@ data(){
   ${CAN_SHARE_JSON?`<button class="primary" id="share-backup">${ICON.share} Share backup</button>`:""}
   <button ${CAN_SHARE_JSON?"":`class="primary" `}id="export">${ICON.backup} Save backup file</button>
   </section>
-  <section class="panel"><h2>Copy &amp; paste through Teams</h2>
-  <p class="muted">For phones that can't save files. Copy records puts your records on the clipboard as text to paste into a Teams message. On the other phone, copy that message, or a backup file sent in Teams, and tap Paste.</p>
-  <p class="note">Text only: lights, boards, breakers, fitting types, notes and job history. Photos are too big for a message, so they stay on each phone.</p>
-  <button class="primary" id="copy-text">${ICON.copy} Copy records</button>
-  <button id="paste-text">${ICON.paste} Paste records or backup file</button>
+  <section class="panel"><h2>Add from a backup file</h2>
+  <p class="muted">Got a backup file (.json) from another phone, for example in Teams? Copy the file there, then tap Paste backup file. You'll see what's in it before anything changes.</p>
+  <button class="primary" id="paste-file">${ICON.paste} Paste backup file</button>
+  <label class="btn">Choose backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
   <div id="paste-box" hidden><p class="note" id="paste-why">Couldn't read the clipboard automatically.</p><label class="f">Press and hold in the box and tap Paste.<textarea id="paste-area" rows="4" placeholder="Paste here"></textarea></label><button id="paste-check">Check</button></div>
   </section>
-  <section class="panel"><h2>Add from a backup file</h2>
-  <p class="muted">Pick a backup file from another phone. You'll see what's in it before anything changes.</p>
-  <label class="btn">Choose backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
-  </section>`;
+  <section class="panel"><h2>Copy &amp; paste through Teams</h2>
+  <p class="muted">Another way, without a file: Copy records puts your records on the clipboard as text to paste into a Teams message. On the other phone, copy that message and tap Paste records.</p>
+  <p class="note">Text only: lights, boards, breakers, fitting types, notes and job history. Photos are too big for a message, so they stay on each phone.</p>
+  <button class="primary" id="copy-text">${ICON.copy} Copy records</button>
+  <button id="paste-text">${ICON.paste} Paste records</button>
+  </section>
+`;
 }
 };
 function cbChips(){ const b=board(draft?.board); return breakersOf(b).map(k=>`<button type="button" data-setcb="${esc(k.cb)}">CB ${esc(k.cb)}${k.label?` · ${esc(k.label)}`:""}</button>`).join(""); }
@@ -1561,6 +1563,7 @@ document.addEventListener("click",async e=>{
       catch{ toast("Couldn't copy here. Try the installed app."); }
       return;
     }
+    case "paste-file":
     case "paste-text": {
       const parts=await readClipboard();
       if(!parts.length) return showPasteBox("Couldn't read the clipboard automatically.");
@@ -1577,7 +1580,7 @@ document.addEventListener("click",async e=>{
   }
 });
 /* buttons that change records; they're hidden when locked, this is the backstop */
-const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","copy-text","paste-text","paste-check","same-last","pick-skip","del-breaker"]);
+const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","copy-text","paste-text","paste-file","paste-check","same-last","pick-skip","del-breaker"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
 document.addEventListener("paste",async e=>{
   if(e.target.id!=="paste-area") return;
