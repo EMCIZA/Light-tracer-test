@@ -76,6 +76,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block;background:var(--bg)}
 .photos .ph{position:relative}
 .photos .ph button{position:absolute;top:4px;right:4px;padding:2px 9px;font-size:13px}
+.photos.full{grid-template-columns:1fr;gap:12px}
+.photos.full img{aspect-ratio:auto;height:auto;object-fit:contain;border-radius:12px}
+.photos.full .ph button{top:8px;right:8px;padding:6px 12px;font-size:15px;background:rgba(17,24,39,.65);color:#fff;border-color:transparent}
 .empty{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);font-size:14px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600;color:var(--muted);min-width:0}
 label.f input,label.f select,label.f textarea{font:400 16px var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
@@ -690,7 +693,9 @@ function resizeImage(file,max=1200){
 function photos(list,key,{edit=false,one=false}={}){
   edit=edit&&can();
   if(!list.length) return `<div class="empty">No photo yet.</div>`;
-  return `<div class="photos${one&&list.length===1?" one":""}">${list.map((p,i)=>`<div class="ph"><img src="${p}" data-view alt="Photo ${i+1}">${edit?`<button type="button" data-del="${key}:${i}" aria-label="Remove photo">✕</button>`:""}</div>`).join("")}</div>`;
+  // on a light, board or fitting type page: full-width photos, one under another. In edit forms: small thumbnails.
+  const full=!view.name.startsWith("edit");
+  return `<div class="photos${full?" full":one&&list.length===1?" one":""}">${list.map((p,i)=>`<div class="ph"><img src="${p}" data-view alt="Photo ${i+1}">${edit?`<button type="button" data-del="${key}:${i}" aria-label="Remove photo">✕</button>`:""}</div>`).join("")}</div>`;
 }
 const addPhoto = (key,label) => !can() ? "" : `<label class="btn">${label}<input type="file" data-add="${key}" accept="image/*" multiple hidden></label>`;
 let scanCallback=null, stream=null, scanTimer=null;
