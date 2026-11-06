@@ -1,5 +1,6 @@
 <meta charset="utf-8">
 <title>Light Tracer TEST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LT Test">
@@ -29,6 +30,9 @@
   --hero1:#4338ca; --hero2:#6d28d9; --shadow:none; color-scheme:dark}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink);margin:0}
+/* feel like an app: no sideways drift, no rubber-band bounce, no double-tap zoom */
+html,body{overflow-x:hidden;overscroll-behavior:none;max-width:100%}
+html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(104px + env(safe-area-inset-bottom,0px))}
