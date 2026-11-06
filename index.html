@@ -549,9 +549,17 @@ const sig = r => JSON.stringify(r,(k,v)=>k==="u"?undefined:(typeof v==="string"&
 const recs = d => [...d.lights.map(r=>["L"+r.code,r]),...d.boards.map(r=>["B"+r.code,r]),...d.types.map(r=>["T"+r.id,r])];
 let SNAP=new Map();
 function resnap(){ SNAP=new Map(recs(DB).map(([k,r])=>[k,sig(r)])); }
+/* "birth certificate": a light or board set up on this phone gets an id that's unique to that moment and phone.
+   Same id on two phones = the same record shared earlier. Same tag number, different ids = set up separately. */
+const newCid = () => Date.now().toString(36)+"-"+Array.from(crypto.getRandomValues(new Uint8Array(6)),x=>x.toString(16).padStart(2,"0")).join("");
+const ids = r => [r.cid,...(r.alias||[])].filter(Boolean);
 async function save(){
-  const now=Date.now();
-  for(const [k,r] of recs(DB)){ const g=sig(r); if(SNAP.get(k)!==g){ r.u=now; SNAP.set(k,g); } }
+  const now=Date.now(), next=new Map();
+  for(const [k,r] of recs(DB)){
+    if(!SNAP.has(k) && !r.cid && k[0]!=="T") r.cid=newCid();
+    const g=sig(r); if(SNAP.get(k)!==g) r.u=now; next.set(k,g);
+  }
+  SNAP=next;
   await putKV("data",DB);
   featCache.size>300&&featCache.clear();
 }
@@ -1076,8 +1084,9 @@ function reportPanel(){
   const r=REPORT;
   return `<section class="panel hero"><h2>Merged</h2>
   <p>${plural(r.added,"record")} added, ${r.updated} updated, ${r.removed} removed.</p>
-  ${r.conflicts.length?`<h3>Check these tags</h3><p class="note">The same number is on something different in the file. These were left as they are on this phone. Two tags may have been printed with the same number.</p>
-    <div class="hist">${r.conflicts.map(c=>`<div><span class="code">${esc(c.code)}</span><span>${esc(c.why)}</span></div>`).join("")}</div>`:""}
+  ${r.conflicts.length?`<h3>Check these tags</h3><p class="note">These tag numbers were set up separately on each phone, so nothing was combined. Is it the same thing? If not, keep yours and put a fresh tag on the other one.</p>
+    ${r.conflicts.map((c,i)=>`<div class="sub"><div class="row" style="align-items:center"><span class="code" style="flex:0 0 auto">${esc(c.code)}</span><span style="flex:1 1 auto">${esc(c.why)}</span></div>
+      <div class="row">${c.canCombine?`<button data-combine="${i}">Same ${c.kind}, combine</button>`:""}<button data-keep="${i}">Keep mine</button></div></div>`).join("")}`:""}
   <button id="report-ok">Done</button></section>`;
 }
 const same = (a,b) => String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
@@ -1086,15 +1095,20 @@ function mergeRec(L,R,photoKeys){
   const before=sig(L), keep={};
   photoKeys.forEach(k=>keep[k]=[...new Set([...(L[k]||[]),...(R[k]||[])])]);
   if(L.history||R.history){ const m=new Map(); [...(L.history||[]),...(R.history||[])].forEach(h=>m.set(h.d+"|"+h.t,h)); keep.history=[...m.values()].sort((a,b)=>a.d.localeCompare(b.d)); }
-  const u=Math.max(L.u||0,R.u||0);
+  const u=Math.max(L.u||0,R.u||0), all=[...new Set([...ids(L),...ids(R)])].sort();
   if((R.u||0)>(L.u||0)) Object.assign(L,R);
   Object.assign(L,keep); L.u=u;
+  if(all.length){ L.cid=all[0]; if(all.length>1) L.alias=all.slice(1); else delete L.alias; }
   return sig(L)!==before;
 }
 function mergeData(inc){
   const r={added:0,updated:0,removed:0,conflicts:[]};
-  const tomb={...inc.deleted}; for(const [k,v] of Object.entries(DB.deleted)) tomb[k]=Math.max(tomb[k]||0,v);
-  const gone=(key,rec)=>(tomb[key]||0)>=(rec.u||0)&&!!tomb[key];
+  const tv=v=>typeof v==="number"?v:(v?.t||0);
+  const tomb={...inc.deleted}; for(const [k,v] of Object.entries(DB.deleted)) if(tv(v)>=tv(tomb[k])) tomb[k]=v;
+  // a deletion only removes the record it was made on (when both carry a birth certificate)
+  const gone=(key,rec)=>{ const v=tomb[key]; if(!v) return false; const c=typeof v==="object"?v.cid:""; if(c&&ids(rec).length&&!ids(rec).includes(c)) return false; return tv(v)>=(rec.u||0); };
+  const sameRec=(L,R)=>{ const a=ids(L),b=ids(R); return a.length&&b.length ? (a.some(x=>b.includes(x))?"yes":"no") : "unknown"; };
+  const where=x=>`${x.location||"no location"}${board(x.board)?` on ${board(x.board).name}`:""}`;
   // fitting types: same id, or same name, count as the same type
   const typeMap={};
   for(const T of inc.types){
@@ -1104,16 +1118,18 @@ function mergeData(inc){
   }
   for(const R of inc.boards){
     const c=R.code, L=board(c);
-    if(light(c)){ r.conflicts.push({code:c,why:`A board in the file ("${R.name}"), but a light here.`}); continue; }
+    if(light(c)){ r.conflicts.push({code:c,kind:"board",why:`A board in the file ("${R.name}"), but a light here.`}); continue; }
     if(!L){ if(!gone(c,R)){ DB.boards.push(R); r.added++; } continue; }
-    if(R.name&&L.name&&!same(R.name,L.name)){ r.conflicts.push({code:c,why:`Board "${R.name}" in the file, "${L.name}" here.`}); continue; }
+    const sr=sameRec(L,R);
+    if(sr==="no"||(sr==="unknown"&&R.name&&L.name&&!same(R.name,L.name))){ r.conflicts.push({code:c,kind:"board",canCombine:true,rec:R,why:`File: board "${R.name||"no name"}". Here: board "${L.name||"no name"}".`}); continue; }
     if(mergeRec(L,R,["photos"])) r.updated++;
   }
   for(const R0 of inc.lights){
     const R={...R0,type:typeMap[R0.type]||R0.type}, c=R.code, L=light(c);
-    if(board(c)){ r.conflicts.push({code:c,why:`A light in the file (${R.location||"no location"}), but a board here.`}); continue; }
+    if(board(c)){ r.conflicts.push({code:c,kind:"light",why:`A light in the file (${R.location||"no location"}), but a board here.`}); continue; }
     if(!L){ if(!gone(c,R)){ DB.lights.push(R); r.added++; } continue; }
-    if(L.board&&R.board&&L.board!==R.board&&L.location&&R.location&&!same(L.location,R.location)){ r.conflicts.push({code:c,why:`"${R.location}" in the file, "${L.location}" here.`}); continue; }
+    const sr=sameRec(L,R);
+    if(sr==="no"||(sr==="unknown"&&L.board&&R.board&&L.board!==R.board&&L.location&&R.location&&!same(L.location,R.location))){ r.conflicts.push({code:c,kind:"light",canCombine:true,rec:R,why:`File: ${where(R)}. Here: ${where(L)}.`}); continue; }
     if(mergeRec(L,R,["cbPhotos","lightPhotos","driverPhotos"])) r.updated++;
   }
   // deletions made on either phone
@@ -1212,8 +1228,14 @@ async function sharePDF(){
 
 /* ---------- events ---------- */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-reprint],[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
+  const t=e.target.closest("[data-combine],[data-keep],[data-reprint],[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
   if(!t) return;
+  if(t.dataset.combine||t.dataset.keep){
+    if(needEdit()) return;
+    const i=+(t.dataset.combine??t.dataset.keep), c=REPORT?.conflicts[i]; if(!c) return;
+    if(t.dataset.combine){ const L=c.kind==="board"?board(c.code):light(c.code); if(L) mergeRec(L,c.rec,c.kind==="board"?["photos"]:["cbPhotos","lightPhotos","driverPhotos"]); await save(); toast(`Tag ${c.code} combined`); }
+    REPORT.conflicts.splice(i,1); return render();
+  }
   if(t.dataset.reprint){ const [f,c]=t.dataset.reprint.split(":").map(Number); MAKE={first:f,count:c}; render(); return $("#m-batch")?.scrollIntoView({block:"start"}); }
   if(t.dataset.go) return go(t.dataset.go,t.dataset.arg);
   if(t.dataset.type) return go("type",t.dataset.type);
@@ -1256,8 +1278,8 @@ document.addEventListener("click",async e=>{
     case "del": {
       if(view.name==="board"){ const n=DB.lights.filter(l=>l.board===view.arg).length; if(n){ toast(`${n} light${n>1?"s are":" is"} linked to this board. Link ${n>1?"them":"it"} to another board or delete ${n>1?"them":"it"} first.`); return; } }
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to delete"; return; }
+      { const rec=board(view.arg)||light(view.arg); DB.deleted[view.arg]={t:Date.now(),cid:rec?.cid||""}; }
       if(view.name==="board") DB.boards=DB.boards.filter(b=>b.code!==view.arg); else DB.lights=DB.lights.filter(l=>l.code!==view.arg);
-      DB.deleted[view.arg]=Date.now();
       await save(); toast(`Tag ${view.arg} deleted. It's blank again.`); return go("home");
     }
     case "m-get": {
