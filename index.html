@@ -557,7 +557,7 @@ const Match=(()=>{
 </script>
 <script>
 /* App version: bump with every published change, so phones can be compared at a glance. */
-const APP_VERSION="0.16", APP_DATE="2026-11-06", APP_CHANNEL="Test";
+const APP_VERSION="0.17", APP_DATE="2026-11-06", APP_CHANNEL="Test";
 const versionText = () => `Version ${APP_VERSION}${APP_CHANNEL?` (${APP_CHANNEL.toLowerCase()})`:""} · ${fmtDate(APP_DATE)}`;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1153,7 +1153,7 @@ data(){
   <p class="muted">Got a backup file (.json) from another phone, for example in Teams? Copy the file there, then tap Paste backup file. You'll see what's in it before anything changes.</p>
   <button class="primary" id="paste-file">${ICON.paste} Paste backup file</button>
   <label class="btn">Choose backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
-  <div id="paste-box" hidden><p class="note" id="paste-why">Couldn't read the clipboard automatically.</p><label class="f">Press and hold in the box and tap Paste.<textarea id="paste-area" rows="4" placeholder="Paste here"></textarea></label><button id="paste-check">Check</button></div>
+  <div id="paste-box" hidden><p class="note" id="paste-why">Couldn't read the clipboard automatically.</p><label class="f">Press and hold in the box and tap Paste. It's read straight away.<textarea id="paste-area" rows="2" placeholder="Paste here"></textarea></label></div>
   </section>
   <section class="panel"><h2>Copy &amp; paste through Teams</h2>
   <p class="muted">Another way, without a file: Copy records puts your records on the clipboard as text to paste into a Teams message. On the other phone, copy that message and tap Paste records.</p>
@@ -1582,15 +1582,20 @@ document.addEventListener("click",async e=>{
 /* buttons that change records; they're hidden when locked, this is the backstop */
 const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","copy-text","paste-text","paste-file","paste-check","same-last","pick-skip","del-breaker"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
+/* Pasting into the box: take the data straight off the clipboard and never let it land in the box as text.
+   (Drawing a whole backup as text in a box is what made pasting slow.) Everything is read before the first await,
+   because the clipboard data is only available during the paste itself. */
 document.addEventListener("paste",async e=>{
   if(e.target.id!=="paste-area") return;
-  const dt=e.clipboardData, parts=[];
-  for(const f of dt?.files||[]) parts.push({kind:"file",type:f.type||f.name,text:/^image\//.test(f.type)?null:await f.text()});
-  if(parts.length){ e.preventDefault(); }
-  for(const type of dt?.types||[]) if(type!=="Files") parts.push({kind:"paste",type,text:dt.getData(type)});
-  if(!parts.length) return;
-  try{ const j=await fromPasted(parts); e.preventDefault(); showImport(j); }
-  catch(msg){ if(parts.some(p=>p.kind==="file")) toast(typeof msg==="string"?msg:"Couldn't read that file."); }
+  e.preventDefault();
+  const dt=e.clipboardData, files=[...(dt?.files||[])], texts=[];
+  for(const type of dt?.types||[]) if(type!=="Files") texts.push({kind:"paste",type,text:dt.getData(type)});
+  toast("Reading…");
+  const parts=[];
+  for(const f of files) parts.push({kind:"file",type:f.type||f.name,text:/^image\//.test(f.type)?null:await f.text()});
+  parts.push(...texts);
+  try{ showImport(await fromPasted(parts)); toast("Ready. Check it and tap Merge."); }
+  catch(msg){ $("#paste-why").textContent=typeof msg==="string"?msg:"Couldn't read that."; toast(typeof msg==="string"?msg:"Couldn't read that."); }
 });
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
 $("#notice").addEventListener("click",e=>{ if(e.target.id==="notice") $("#notice").hidden=true; });
