@@ -557,7 +557,7 @@ const Match=(()=>{
 </script>
 <script>
 /* App version: bump with every published change, so phones can be compared at a glance. */
-const APP_VERSION="0.14", APP_DATE="2026-11-06", APP_CHANNEL="Test";
+const APP_VERSION="0.15", APP_DATE="2026-11-06", APP_CHANNEL="Test";
 const versionText = () => `Version ${APP_VERSION}${APP_CHANNEL?` (${APP_CHANNEL.toLowerCase()})`:""} · ${fmtDate(APP_DATE)}`;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1150,11 +1150,11 @@ data(){
   <button ${CAN_SHARE_JSON?"":`class="primary" `}id="export">${ICON.backup} Save backup file</button>
   </section>
   <section class="panel"><h2>Copy &amp; paste through Teams</h2>
-  <p class="muted">For phones that can't save files. Copies your records as text to paste into a Teams message. On the other phone, copy the message and tap Paste records.</p>
+  <p class="muted">For phones that can't save files. Copy records puts your records on the clipboard as text to paste into a Teams message. On the other phone, copy that message, or a backup file sent in Teams, and tap Paste.</p>
   <p class="note">Text only: lights, boards, breakers, fitting types, notes and job history. Photos are too big for a message, so they stay on each phone.</p>
   <button class="primary" id="copy-text">${ICON.copy} Copy records</button>
-  <button id="paste-text">${ICON.paste} Paste records</button>
-  <div id="paste-box" hidden><label class="f">Couldn't read what you copied automatically. Press and hold in the box, tap Paste, then tap Check.<textarea id="paste-area" rows="4" placeholder="Paste here"></textarea></label><button id="paste-check">Check</button></div>
+  <button id="paste-text">${ICON.paste} Paste records or backup file</button>
+  <div id="paste-box" hidden><p class="note" id="paste-why">Couldn't read the clipboard automatically.</p><label class="f">Press and hold in the box and tap Paste.<textarea id="paste-area" rows="4" placeholder="Paste here"></textarea></label><button id="paste-check">Check</button></div>
   </section>
   <section class="panel"><h2>Add from a backup file</h2>
   <p class="muted">Pick a backup file from another phone. You'll see what's in it before anything changes.</p>
@@ -1247,6 +1247,24 @@ async function parseRecordsText(txt){
   if(!j||!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0;
   return j;
 }
+/* Read whatever is on the clipboard: copied text, or a copied file (e.g. a backup file copied in Teams).
+   Returns the records, or throws a message saying what was found instead. */
+const looksLikeLink = t => /^\s*https?:\/\/\S+\s*$/.test(t||"");
+async function fromPasted(parts){   // parts: [{kind, type, text}]
+  for(const p of parts){ if(p.text==null) continue; try{ return await parseRecordsText(p.text); }catch{} }
+  const link=parts.find(p=>looksLikeLink(p.text));
+  if(link) throw "That's a link to the file in Teams, not the file itself. The app can't open Teams links. In Teams, use Copy records text instead, or open the file and choose Copy (not Copy link).";
+  if(parts.some(p=>/^image\//.test(p.type))) throw "That's a picture, not Light Tracer records.";
+  if(!parts.length) throw "The clipboard is empty. Copy the Teams message or file again.";
+  throw "That isn't Light Tracer records. Found: "+[...new Set(parts.map(p=>p.type||p.kind))].join(", ")+".";
+}
+async function readClipboard(){
+  const parts=[];
+  if(navigator.clipboard?.read){ try{ for(const item of await navigator.clipboard.read()) for(const type of item.types){ const blob=await item.getType(type); parts.push({kind:"clipboard",type,text:/^image\//.test(type)?null:await blob.text()}); } }catch{} }
+  if(!parts.some(p=>p.text) && navigator.clipboard?.readText){ try{ const t=await navigator.clipboard.readText(); if(t) parts.push({kind:"clipboard",type:"text/plain",text:t}); }catch{} }
+  return parts;
+}
+function showPasteBox(msg){ $("#paste-box").hidden=false; if(msg) $("#paste-why").textContent=msg; $("#paste-area").value=""; $("#paste-area").focus(); }
 function showImport(j){ IMP={data:tidy(migrate(j))}; REPORT=null; render(); $("#imp")?.scrollIntoView({block:"start"}); }
 function importPanel(){
   const d=IMP.data, n=photoCount(d), when=d.savedAt?new Date(d.savedAt).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"";
@@ -1544,12 +1562,14 @@ document.addEventListener("click",async e=>{
       return;
     }
     case "paste-text": {
-      try{ const txt=await navigator.clipboard.readText(); return showImport(await parseRecordsText(txt)); }
-      catch{ $("#paste-box").hidden=false; $("#paste-area").focus(); return; }
+      const parts=await readClipboard();
+      if(!parts.length) return showPasteBox("Couldn't read the clipboard automatically.");
+      try{ return showImport(await fromPasted(parts)); }
+      catch(msg){ return showPasteBox(typeof msg==="string"?msg:"Couldn't read that."); }
     }
     case "paste-check": {
-      try{ return showImport(await parseRecordsText($("#paste-area").value)); }
-      catch{ return toast("That isn't Light Tracer records. Copy the whole Teams message and try again."); }
+      try{ return showImport(await fromPasted([{kind:"box",type:"text/plain",text:$("#paste-area").value}])); }
+      catch(msg){ return toast(typeof msg==="string"?msg:"That isn't Light Tracer records."); }
     }
     case "export":
       try{ const a=document.createElement("a"); a.href=URL.createObjectURL(backupBlob()); a.download=backupName(); a.click(); toast("Backup saved to your Files"); }
@@ -1559,6 +1579,16 @@ document.addEventListener("click",async e=>{
 /* buttons that change records; they're hidden when locked, this is the backstop */
 const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","copy-text","paste-text","paste-check","same-last","pick-skip","del-breaker"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
+document.addEventListener("paste",async e=>{
+  if(e.target.id!=="paste-area") return;
+  const dt=e.clipboardData, parts=[];
+  for(const f of dt?.files||[]) parts.push({kind:"file",type:f.type||f.name,text:/^image\//.test(f.type)?null:await f.text()});
+  if(parts.length){ e.preventDefault(); }
+  for(const type of dt?.types||[]) if(type!=="Files") parts.push({kind:"paste",type,text:dt.getData(type)});
+  if(!parts.length) return;
+  try{ const j=await fromPasted(parts); e.preventDefault(); showImport(j); }
+  catch(msg){ if(parts.some(p=>p.kind==="file")) toast(typeof msg==="string"?msg:"Couldn't read that file."); }
+});
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
 $("#notice").addEventListener("click",e=>{ if(e.target.id==="notice") $("#notice").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hidden) closeLock(); $("#notice").hidden=true; $("#viewer").hidden=true; } });
