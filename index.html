@@ -119,6 +119,15 @@ label.f textarea{min-height:64px;resize:vertical}
 #scanner .scan-ui{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;color:#fff;text-align:center;font-weight:600}
 #scanner .scan-ui button{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
 .thumb{width:64px;height:48px;object-fit:cover;border-radius:5px;border:1px solid var(--line);flex:0 0 auto;background:var(--bg)}
+.cbchip{font-family:var(--mono);font-weight:700;font-size:14px;background:var(--ink);color:var(--surface);border-radius:6px;padding:3px 8px;white-space:nowrap;flex:0 0 auto}
+.cbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.cbgrid button{flex-direction:column;align-items:flex-start;gap:2px;padding:12px;text-align:left;min-width:0}
+.cbgrid button b{font-family:var(--mono);font-size:18px}
+.cbgrid button span{font-size:12px;font-weight:400;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:6px 10px;font-size:14px;border-radius:999px}
+.samelast{flex-direction:column;gap:2px;width:100%}
+.samelast span{font-size:14px;font-weight:500;opacity:.9}
 .best{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:var(--accent);color:var(--on-accent);border-radius:999px;padding:2px 8px;white-space:nowrap}
 .idphoto img{width:100%;max-height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
 /* friendly home + view-only / editing mode */
@@ -630,7 +639,7 @@ async function setPw(pw){
   await putKV("auth",AUTH);
 }
 /* views that change records need editing access */
-const EDIT_VIEWS=new Set(["editBoard","editLight","editType","linkLight","make","data","settings"]);
+const EDIT_VIEWS=new Set(["editBoard","editLight","editType","linkLight","pickBreaker","make","data","settings"]);
 function askUnlock(then,msg){
   afterUnlock=then||null;
   $("#lock-msg").textContent=msg||"Enter the editor password to add, change or delete records.";
@@ -653,13 +662,13 @@ function seed(){
       {id:"tp2",name:"90mm LED downlight",driverModel:"10W 300mA constant current",driverLocation:"Lying on the ceiling tile next to the downlight",notes:"Example type.",photos:[exLight("down")],driverPhotos:[]}
     ],
     boards:[
-      {code:"1001",name:"DB-L3-A",location:"Level 3, east riser cupboard (key 92)",fedFrom:"MSB Ground, CB 12",notes:"Lighting chassis on the left. Door sticks, lift and pull.",photos:[exRiser(),exBoard("DB-L3-A",0)]},
-      {code:"1002",name:"DB-L3-B",location:"Level 3, west riser beside fire stairs",fedFrom:"MSB Ground, CB 13",notes:"",photos:[exBoard("DB-L3-B",0)]}
+      {code:"1001",name:"DB-L3-A",location:"Level 3, east riser cupboard (key 92)",fedFrom:"MSB Ground, CB 12",notes:"Lighting chassis on the left. Door sticks, lift and pull.",photos:[exRiser(),exBoard("DB-L3-A",0)],breakers:[{cb:"14",label:"L3 corridor lights",phase:"L1",photos:[exBoard("DB-L3-A",14)]}]},
+      {code:"1002",name:"DB-L3-B",location:"Level 3, west riser beside fire stairs",fedFrom:"MSB Ground, CB 13",notes:"",photos:[exBoard("DB-L3-B",0)],breakers:[{cb:"7",label:"Meeting room 3.12 lights",phase:"L3",photos:[exBoard("DB-L3-B",7)]}]}
     ],
     lights:[
-      {code:"1003",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor outside lift lobby",fitting:"600x600 LED panel",notes:"",driverLocation:"This one is above the tile toward the lifts.",cbPhotos:[exBoard("DB-L3-A",14)],lightPhotos:[exLight("panel")],history:[{d:"2026-10-28",t:"Replaced driver."}]},
-      {code:"1004",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor near kitchenette",fitting:"600x600 LED panel",notes:"Same circuit as 1003.",cbPhotos:[exBoard("DB-L3-A",14)],lightPhotos:[exLight("panel")],history:[{d:"2026-11-02",t:"Tagged, no fault."}]},
-      {code:"1005",type:"tp2",board:"1002",cb:"7",phase:"L3",location:"Meeting room 3.12, downlight by window",fitting:"90mm LED downlight",notes:"On motion sensor in ceiling.",cbPhotos:[exBoard("DB-L3-B",7)],lightPhotos:[exLight("down")],history:[{d:"2026-11-04",t:"Downlight swapped."}]}
+      {code:"1003",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor outside lift lobby",fitting:"600x600 LED panel",notes:"",driverLocation:"This one is above the tile toward the lifts.",cbPhotos:[],lightPhotos:[exLight("panel")],history:[{d:"2026-10-28",t:"Replaced driver."}]},
+      {code:"1004",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor near kitchenette",fitting:"600x600 LED panel",notes:"Same circuit as 1003.",cbPhotos:[],lightPhotos:[exLight("panel")],history:[{d:"2026-11-02",t:"Tagged, no fault."}]},
+      {code:"1005",type:"tp2",board:"1002",cb:"7",phase:"L3",location:"Meeting room 3.12, downlight by window",fitting:"90mm LED downlight",notes:"On motion sensor in ceiling.",cbPhotos:[],lightPhotos:[exLight("down")],history:[{d:"2026-11-04",t:"Downlight swapped."}]}
     ]};
 }
 /* older saved data (boards without tag numbers) is converted once */
@@ -672,8 +681,21 @@ function migrate(d){
   out.lastPrinted=Math.max(out.lastPrinted,next-1);
   return out;
 }
-function tidy(d){ d.deleted=d.deleted||{}; d.batches=d.batches||[]; d.boards.forEach(b=>{ b.photos=b.photos||[]; }); d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
+function tidy(d){ d.deleted=d.deleted||{}; d.batches=d.batches||[]; d.boards.forEach(b=>{ b.photos=b.photos||[]; }); d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; });
+  d.boards.forEach(b=>{ b.breakers=(b.breakers||[]).map(k=>({label:"",phase:"",photos:[],...k,cb:String(k.cb)})); });
+  (d.lights||[]).forEach(l=>{ const b=l.board&&l.cb&&d.boards.find(x=>x.code===l.board); if(b&&!b.breakers.some(k=>k.cb===l.cb)) b.breakers.push({cb:l.cb,label:"",phase:l.phase||"",photos:[]}); });
+  return d; }
 const board = c => DB.boards.find(b=>b.code===c);
+/* breakers: kept on the board, once each (number, what it feeds, phase, photo). Lights just store the breaker number. */
+const cbSort = (a,c) => (parseFloat(a.cb)||0)-(parseFloat(c.cb)||0) || String(a.cb).localeCompare(String(c.cb));
+const breakersOf = b => (b?.breakers||[]).slice().sort(cbSort);
+const breakerOf = l => { const b=board(l.board); return b&&l.cb ? (b.breakers||[]).find(k=>k.cb===l.cb)||null : null; };
+function ensureBreaker(bcode,cb){ const b=board(bcode); cb=String(cb||"").trim().toUpperCase(); if(!b||!cb) return null; b.breakers=b.breakers||[]; let k=b.breakers.find(x=>x.cb===cb); if(!k){ k={cb,label:"",phase:"",photos:[]}; b.breakers.push(k); } return k; }
+const curBreaker = () => { const [bc,cb]=String(view.arg).split(":"); return (board(bc)?.breakers||[]).find(k=>k.cb===cb); };
+function parseCbs(txt){ const out=[]; String(txt).replace(/\s*-\s*/g,"-").split(/[,\s]+/).forEach(t=>{ const m=t.match(/^(\d+)-(\d+)$/); if(m){ let a=+m[1],z=+m[2]; if(a>z)[a,z]=[z,a]; for(let n=a;n<=Math.min(z,a+199);n++) out.push(String(n)); } else if(t) out.push(t.toUpperCase()); }); return [...new Set(out)]; }
+const breakerItem = (b,k) => { const n=DB.lights.filter(l=>l.board===b.code&&l.cb===k.cb).length;
+  return `<button class="item" data-go="breaker" data-arg="${b.code}:${esc(k.cb)}"><span class="cbchip">CB ${esc(k.cb)}</span><span class="t"><b>${esc(k.label||"No description yet")}</b><span>${[k.phase,plural(n,"light")].filter(Boolean).join(" · ")}</span></span>${k.photos[0]?`<img class="thumb" src="${k.photos[0]}" alt="">`:""}</button>`; };
+function rememberLink(l){ DB.lastLink={board:l.board,cb:l.cb||"",type:l.type||"",location:l.location||""}; }
 const light = c => DB.lights.find(l=>l.code===c);
 const ftype = id => DB.types.find(t=>t.id===id);
 
@@ -749,7 +771,7 @@ const ICON={
   more:svgI(`<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>`),
   gear:svgI(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>`)
 };
-const TAB={home:"home",boards:"boards",board:"boards",editBoard:"boards",types:"types",type:"types",editType:"types",identify:"types",more:"more",make:"more",data:"more",settings:"more"};
+const TAB={home:"home",boards:"boards",board:"boards",breaker:"boards",editBoard:"boards",types:"types",type:"types",editType:"types",identify:"types",more:"more",make:"more",data:"more",settings:"more"};
 function renderTabs(){
   const cur=TAB[view.name]||"", t=(id,icon,label)=>`<button data-go="${id}"${cur===id?` aria-current="page"`:""}>${icon}<span>${label}</span></button>`;
   $("#tabbar").innerHTML=t("home",ICON.home,"Home")+t("boards",ICON.board,"Boards")
@@ -863,6 +885,7 @@ blank(code){
   <section class="panel"><p class="muted">Setting up a new tag needs the editor password.</p><button class="primary" id="unlock">${ICON.lock} Unlock to set it up</button></section>`;
   return `${back()}
   <div class="newtag"><b>${esc(code)}</b><span>Blank tag. What's it stuck on?</span></div>
+  ${DB.lastLink&&board(DB.lastLink.board)?`<button class="primary samelast" id="same-last">Light, same as last one<span>${esc([board(DB.lastLink.board).name,DB.lastLink.cb&&"CB "+DB.lastLink.cb,DB.lastLink.location].filter(Boolean).join(" · "))}</span></button>`:""}
   <div class="choice">
     <button data-go="linkLight" data-arg="${esc(code)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><b>A light</b><span>Scan the board's tag next to link it</span></button>
     <button data-go="editBoard" data-arg="${esc(code)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8v3M11 8v3M14 8v3M8 14v3M11 14v3M14 14v3"/></svg><b>A board</b><span>Add its name, location and photos</span></button>
@@ -881,8 +904,41 @@ linkLight(code){
   </section>
   <section class="panel"><p class="note">Can't get to the board right now? Save the light and link it later. It goes on the "Waiting for a board" list.</p><button id="save-unlinked">Save, link later</button></section>`;
 },
+pickBreaker(code){
+  const b=board(draft?.board); if(!b||draft.code!==code) return V.linkLight(code);
+  const bks=breakersOf(b);
+  return `${back("linkLight",code)}
+  <section class="panel">
+    <div class="row" style="align-items:center"><h2 style="flex:1 1 auto">Which breaker?</h2><span class="code lg" style="flex:0 0 auto">${esc(code)}</span></div>
+    <p class="muted">Light ${esc(code)} is on <b>${esc(b.name)}</b>. Tap its breaker.</p>
+    ${bks.length?`<div class="cbgrid">${bks.map(k=>`<button type="button" data-pickcb="${esc(k.cb)}"><b>CB ${esc(k.cb)}</b><span>${esc(k.label||k.phase||"")}</span></button>`).join("")}</div>`:`<p class="note">No breakers added to this board yet. Type the number below and it's added to the board.</p>`}
+    <form class="lookup" id="pick-new"><input id="pn-cb" inputmode="numeric" placeholder="${bks.length?"Another breaker no.":"Breaker no."}" aria-label="Breaker number" style="font-size:18px"><button>Use</button></form>
+    <button type="button" id="pick-skip">Don't know yet, skip</button>
+  </section>`;
+},
+breaker(arg){
+  const [bc,cb]=String(arg).split(":"), b=board(bc), k=curBreaker();
+  if(!b||!k) return `${back()}<div class="empty">That breaker isn't on this board any more.</div>`;
+  const ls=DB.lights.filter(l=>l.board===bc&&l.cb===cb);
+  draft={...k,photos:[...k.photos]};
+  return `${back("board",bc)}
+  <section class="panel">
+    <div class="row" style="align-items:center"><span class="cbchip" style="font-size:20px">CB ${esc(cb)}</span><span class="muted" style="flex:1 1 auto">on ${esc(b.name)}</span></div>
+    <h1>${esc(k.label||"Breaker "+cb)}</h1>
+    <div class="supply"><div><div class="k">Board</div><div class="v small">${esc(b.name)}</div></div><div><div class="k">Phase</div><div class="v small">${esc(k.phase||"Not recorded")}</div></div>
+      <div class="wide"><div class="k">Board is at</div><div class="v small">${esc(b.location)}</div></div></div>
+  </section>
+  ${can()?`<form class="panel" id="breaker-form"><h3>Details</h3>
+    <label class="f">What it feeds<input id="k-label" value="${esc(k.label)}" placeholder="e.g. L3 corridor lights"></label>
+    <label class="f">Phase<select id="k-phase">${["","L1","L2","L3"].map(p=>`<option ${p===k.phase?"selected":""}>${p}</option>`).join("")}</select></label>
+    <button class="primary">Save breaker</button></form>`:""}
+  <section class="panel"><h3>Photo of the breaker</h3><div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>${addPhoto("photos","+ Photo of the breaker")}
+    ${can()?`<p class="note">Stored once here, and shown on every light on this breaker.</p>`:""}</section>
+  <section class="panel"><h3>${plural(ls.length,"light")} on this breaker</h3><div class="list">${ls.map(lightItem).join("")||`<div class="empty">No lights linked to this breaker yet.</div>`}</div>
+    ${can()&&!ls.length?`<button class="danger" id="del-breaker">Remove this breaker</button>`:""}</section>`;
+},
 light(code){
-  const l=light(code), b=board(l.board), T=ftype(l.type);
+  const l=light(code), b=board(l.board), T=ftype(l.type), K=breakerOf(l), ph=K?.phase||l.phase;
   draft={...l,lightPhotos:[...l.lightPhotos],driverPhotos:[...l.driverPhotos]};
   return `${back()}
   <div class="row">${can()?`<button data-go="editLight" data-arg="${l.code}">${l.location||l.cb||l.lightPhotos.length?"Edit":"Add details"}</button>`:""}<button data-go="qr" data-arg="${l.code}">Show QR</button>${can()?`<button class="danger" id="del">Delete</button>`:""}</div>
@@ -891,7 +947,8 @@ light(code){
     <h1>${esc(lightName(l))}</h1>
     ${b?`<div class="supply">
       <div${l.cb?"":` class="wide"`}><div class="k">Board</div><div class="v">${esc(b.name)}</div></div>
-      ${l.cb?`<div><div class="k">Circuit breaker</div><div class="v">CB ${esc(l.cb)}${l.phase?` <span class="cb">${esc(l.phase)}</span>`:""}</div></div>`:""}
+      ${l.cb?`<div><div class="k">Circuit breaker</div><div class="v">CB ${esc(l.cb)}${ph?` <span class="cb">${esc(ph)}</span>`:""}</div></div>`:""}
+      ${K?.label?`<div class="wide"><div class="k">Breaker feeds</div><div class="v small">${esc(K.label)}</div></div>`:""}
       <div class="wide"><div class="k">Board is at</div><div class="v small">${esc(b.location)}</div></div>
       ${b.notes?`<div class="wide"><div class="k">Access notes</div><div class="v small">${esc(b.notes)}</div></div>`:""}
     </div>`:can()?`<div class="newtag"><span>Not linked to a board yet. Go to the board and scan its tag.</span></div><button class="primary" id="link-scan">Scan the board's tag</button>`:`<div class="newtag"><span>Not linked to a board yet.</span></div>`}
@@ -904,7 +961,7 @@ light(code){
     ${l.driverModel||l.driverLocation?`<div class="supply">${l.driverModel?`<div class="wide"><div class="k">This light's driver</div><div class="v small">${esc(l.driverModel)}</div></div>`:""}${l.driverLocation?`<div class="wide"><div class="k">This light's driver is at</div><div class="v small">${esc(l.driverLocation)}</div></div>`:""}</div>`:""}
     ${draft.driverPhotos.length?`<div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>`:`<div id="ph-driverPhotos"></div>`}${addPhoto("driverPhotos","+ Photo of this light's driver")}
   </section>
-  ${b?`${l.cbPhotos.length?`<section class="panel"><h3>Breaker</h3>${photos(l.cbPhotos,"",{one:true})}</section>`:""}
+  ${b?`${l.cb||l.cbPhotos.length?`<section class="panel"><h3>Breaker${l.cb?" CB "+esc(l.cb):""}</h3>${K?.photos.length||l.cbPhotos.length?photos([...(K?.photos||[]),...l.cbPhotos],""):`<p class="note">No photo of this breaker yet.</p>`}${K?`<button data-go="breaker" data-arg="${b.code}:${esc(K.cb)}">Open breaker →</button>`:""}</section>`:can()?`<section class="panel"><h3>Breaker</h3><p class="note">Not set yet.</p><button data-go="editLight" data-arg="${l.code}">Set the breaker</button></section>`:""}
   <section class="panel"><h3>Board ${esc(b.name)}</h3>${photos(b.photos,"")}<button data-open="${b.code}">Open board ${esc(b.code)} →</button></section>`:""}
   <section class="panel"><h3>Job history</h3>
     <div class="hist">${l.history.slice().reverse().map(h=>`<div><time>${fmtDate(h.d)}</time><span>${esc(h.t)}</span></div>`).join("")||`<p class="muted">Nothing logged yet.</p>`}</div>
@@ -926,7 +983,13 @@ board(code){
     </div>
   </section>
   <section class="panel"><h3>Photos</h3><div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>${addPhoto("photos","+ Add photos")}</section>
-  <section class="panel"><h3>Lights on this board, by breaker</h3><div class="list">${ls.map(lightItem).join("")||`<div class="empty">No lights linked yet. Tag a light, then scan this board's tag.</div>`}</div></section>`;
+  <section class="panel"><h3>Breakers</h3>
+    <div class="list">${breakersOf(b).map(k=>breakerItem(b,k)).join("")||`<div class="empty">No breakers added yet.</div>`}</div>
+    ${can()?`<form class="lookup" id="add-breakers"><input id="ab-nums" placeholder="Add breakers, e.g. 1-24" aria-label="Breaker numbers to add" style="font:400 16px var(--body);letter-spacing:0"><button>Add</button></form>
+      <p class="note">Type a range like 1-24, or numbers like 3, 5, 14. Then tap a breaker to say what it feeds and add a photo.</p>`:""}
+  </section>
+  ${ls.some(l=>!l.cb)?`<section class="panel"><h3>Lights without a breaker</h3><div class="list">${ls.filter(l=>!l.cb).map(lightItem).join("")}</div></section>`:""}
+  ${ls.length?"":`<section class="panel"><div class="empty">No lights linked yet. Tag a light, then scan this board's tag.</div></section>`}`;
 },
 type(id){
   const T=ftype(id), ls=DB.lights.filter(l=>l.type===id), learned=ls.reduce((a,l)=>a+l.lightPhotos.length,0);
@@ -1026,10 +1089,9 @@ editLight(code){
       <label class="f">Where is this light's driver?<input id="f-drvloc" value="${esc(l.driverLocation)}" placeholder="e.g. Inside the fitting, or above the tile 1m east"></label>
       <div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>
       ${addPhoto("driverPhotos","+ Photo of the driver or where it is")}
-      <div class="row"><label class="f">CB number<input id="f-cb" inputmode="numeric" value="${esc(l.cb)}" placeholder="Optional"></label>
-        <label class="f">Phase<select id="f-phase">${["","L1","L2","L3"].map(p=>`<option ${p===l.phase?"selected":""}>${p}</option>`).join("")}</select></label></div>
-      <div id="ph-cbPhotos">${photos(draft.cbPhotos,"cbPhotos",{edit:true})}</div>
-      ${addPhoto("cbPhotos","+ Photo of the breaker")}
+      <label class="f">Breaker (CB number)<input id="f-cb" inputmode="numeric" value="${esc(l.cb)}" placeholder="Optional"></label>
+      <div class="chips" id="cb-chips">${cbChips()}</div>
+      ${draft.cbPhotos.length?`<p class="note">Older breaker photos saved on this light. New breaker photos go on the breaker itself, so they're stored once.</p><div id="ph-cbPhotos">${photos(draft.cbPhotos,"cbPhotos",{edit:true})}</div>`:""}
     </section>
     <section class="panel">
       <label class="f">Notes<textarea id="f-notes" placeholder="Anything the next person should know">${esc(l.notes)}</textarea></label>
@@ -1081,6 +1143,14 @@ data(){
   </section>`;
 }
 };
+function cbChips(){ const b=board(draft?.board); return breakersOf(b).map(k=>`<button type="button" data-setcb="${esc(k.cb)}">CB ${esc(k.cb)}${k.label?` · ${esc(k.label)}`:""}</button>`).join(""); }
+function finishLink(cb){
+  cb=String(cb||"").trim().toUpperCase();
+  const rec={...draft,cb,history:[{d:today(),t:"Tagged."}]};
+  if(cb) ensureBreaker(rec.board,cb);
+  DB.lights.push(rec); rememberLink(rec); save();
+  toast(`Light ${rec.code} linked to ${board(rec.board).name}${cb?`, CB ${cb}`:""}`); go("light",rec.code);
+}
 function linkArea(){
   const b=board(draft.board);
   if(b) return `<div class="linked"><span class="code">${b.code}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.location)}</span></span><button type="button" id="unlink">Change</button></div>`;
@@ -1091,8 +1161,8 @@ function linkArea(){
 }
 function linkBoard(code){
   if(board(code)){
-    if(view.name==="linkLight"){ const rec={...draft,board:code,history:[{d:today(),t:"Tagged."}]}; DB.lights.push(rec); save(); toast(`Light ${rec.code} linked to ${board(code).name}`); return go("light",rec.code); }
-    if(view.name==="editLight"){ draft.board=code; $("#link-area").innerHTML=linkArea(); toast(`Linked to ${board(code).name}. Now add the CB number.`); $("#f-cb")?.focus(); }
+    if(view.name==="linkLight"){ draft.board=code; return go("pickBreaker",draft.code); }
+    if(view.name==="editLight"){ draft.board=code; $("#link-area").innerHTML=linkArea(); $("#cb-chips").innerHTML=cbChips(); toast(`Linked to ${board(code).name}. Now pick the breaker.`); }
     else { const l=light(view.arg); l.board=code; save(); toast(`Linked to ${board(code).name}. Add the CB number.`); go("editLight",l.code); }
     return;
   }
@@ -1110,7 +1180,7 @@ function search(q){
     const b=board(t.board)||{};
     if(cbm) return t.cb===cbm[1];
     if(/^\d+$/.test(q)) return t.code.startsWith(q);
-    const hay=[t.code,t.location,t.fitting,ftype(t.type)?.name,ftype(t.type)?.driverModel,t.notes,t.driverModel,t.driverLocation,b.name,b.location,"cb "+t.cb,"cb"+t.cb].join(" ").toLowerCase();
+    const hay=[t.code,t.location,t.fitting,ftype(t.type)?.name,ftype(t.type)?.driverModel,t.notes,t.driverModel,t.driverLocation,b.name,b.location,breakerOf(t)?.label,"cb "+t.cb,"cb"+t.cb].join(" ").toLowerCase();
     return words.every(w=>hay.includes(w));
   }).map(lightItem);
   const bs=cbm?[]:DB.boards.filter(b=>/^\d+$/.test(q)?b.code.startsWith(q):words.every(w=>[b.code,b.name,b.location,b.fedFrom,b.notes].join(" ").toLowerCase().includes(w))).map(boardItem);
@@ -1127,7 +1197,7 @@ function showResults(){
 /* ---------- QR tag sheets ---------- */
 const FRAMED=(()=>{ try{ return window.self!==window.top; }catch{ return true; } })();
 const CAN_SHARE_JSON=(()=>{ try{ return !FRAMED && !!navigator.canShare && navigator.canShare({files:[new File(["x"],"b.json",{type:"application/json"})]}); }catch{ return false; } })();
-const photoCount = d => d.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos.length+t.driverPhotos.length,0)+d.boards.reduce((a,b)=>a+b.photos.length,0)+d.types.reduce((a,x)=>a+x.photos.length+x.driverPhotos.length,0);
+const photoCount = d => d.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos.length+t.driverPhotos.length,0)+d.boards.reduce((a,b)=>a+b.photos.length+(b.breakers||[]).reduce((x,k)=>x+k.photos.length,0),0)+d.types.reduce((a,x)=>a+x.photos.length+x.driverPhotos.length,0);
 const backupName = () => `light-tracer-backup-${today()}.json`;
 const backupBlob = () => new Blob([JSON.stringify({...DB,savedAt:new Date().toISOString()})],{type:"application/json"});
 let IMP=null, REPORT=null;
@@ -1157,6 +1227,9 @@ function mergeRec(L,R,photoKeys){
   const before=sig(L), keep={};
   photoKeys.forEach(k=>keep[k]=[...new Set([...(L[k]||[]),...(R[k]||[])])]);
   if(L.history||R.history){ const m=new Map(); [...(L.history||[]),...(R.history||[])].forEach(h=>m.set(h.d+"|"+h.t,h)); keep.history=[...m.values()].sort((a,b)=>a.d.localeCompare(b.d)); }
+  if(L.breakers||R.breakers){ const newer=(R.u||0)>(L.u||0), m=new Map();
+    [...((newer?L:R).breakers||[]),...((newer?R:L).breakers||[])].forEach(k=>{ const o=m.get(k.cb); m.set(k.cb,o?{...o,...k,label:k.label||o.label,phase:k.phase||o.phase,photos:[...new Set([...(o.photos||[]),...(k.photos||[])])]}:{...k}); });
+    keep.breakers=[...m.values()]; }
   const u=Math.max(L.u||0,R.u||0), all=[...new Set([...ids(L),...ids(R)])].sort();
   if((R.u||0)>(L.u||0)) Object.assign(L,R);
   Object.assign(L,keep); L.u=u;
@@ -1324,8 +1397,10 @@ async function sharePDF(){
 
 /* ---------- events ---------- */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-combine],[data-keep],[data-reprint],[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
+  const t=e.target.closest("[data-pickcb],[data-setcb],[data-combine],[data-keep],[data-reprint],[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
   if(!t) return;
+  if(t.dataset.pickcb!==undefined){ if(needEdit()) return; return finishLink(t.dataset.pickcb); }
+  if(t.dataset.setcb!==undefined){ const i=$("#f-cb"); if(i) i.value=t.dataset.setcb; return; }
   if(t.dataset.combine||t.dataset.keep){
     if(needEdit()) return;
     const i=+(t.dataset.combine??t.dataset.keep), c=REPORT?.conflicts[i]; if(!c) return;
@@ -1339,12 +1414,23 @@ document.addEventListener("click",async e=>{
   if(t.dataset.open) return open(t.dataset.open);
   if(t.dataset.view!==undefined){ $("#viewer-img").src=t.src; $("#viewer").hidden=false; return; }
   if((t.dataset.del||EDIT_IDS.has(t.id)) && needEdit()) return;
-  if(t.dataset.del){ if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Remove"; return; } const [k,i]=t.dataset.del.split(":"); draft[k].splice(+i,1); refreshPhotos(k); if(view.name==="board"){ board(view.arg).photos=draft.photos; await save(); } if(view.name==="light"){ light(view.arg)[k]=draft[k]; await save(); } if(view.name==="type"){ ftype(view.arg)[k]=draft[k]; await save(); } return; }
+  if(t.dataset.del){ if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Remove"; return; } const [k,i]=t.dataset.del.split(":"); draft[k].splice(+i,1); refreshPhotos(k); if(view.name==="board"){ board(view.arg).photos=draft.photos; await save(); } if(view.name==="light"){ light(view.arg)[k]=draft[k]; await save(); } if(view.name==="type"){ ftype(view.arg)[k]=draft[k]; await save(); } if(view.name==="breaker"){ curBreaker().photos=draft.photos; await save(); } return; }
   switch(t.id){
     case "home-btn": return go("home");
     case "mode-btn": return !AUTH ? go("settings") : unlocked ? lockNow() : askUnlock(()=>render());
     case "unlock": return askUnlock(()=>render());
     case "tab-scan": return scan();
+    case "pick-skip": return finishLink("");
+    case "same-last": {
+      const L=DB.lastLink, code=view.arg; if(!L||!board(L.board)||light(code)||board(code)) return;
+      const rec={code,board:L.board,cb:L.cb,type:L.type,fitting:ftype(L.type)?.name||"",location:L.location,phase:"",notes:"",cbPhotos:[],lightPhotos:[],driverPhotos:[],driverModel:"",driverLocation:"",history:[{d:today(),t:"Tagged."}]};
+      if(rec.cb) ensureBreaker(rec.board,rec.cb);
+      DB.lights.push(rec); rememberLink(rec); await save(); toast(`Light ${code} saved, same as the last one. Edit it if anything's different.`); return go("light",code);
+    }
+    case "del-breaker": {
+      if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to remove"; return; }
+      const [bc,cb]=String(view.arg).split(":"), b=board(bc); b.breakers=(b.breakers||[]).filter(k=>k.cb!==cb); await save(); toast(`CB ${cb} removed`); return go("board",bc);
+    }
     case "lock-now": return lockNow();
     case "lock-cancel": return closeLock();
     case "pw-remove": {
@@ -1411,7 +1497,7 @@ document.addEventListener("click",async e=>{
   }
 });
 /* buttons that change records; they're hidden when locked, this is the backstop */
-const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace"]);
+const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","same-last","pick-skip","del-breaker"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
 $("#notice").addEventListener("click",e=>{ if(e.target.id==="notice") $("#notice").hidden=true; });
@@ -1444,6 +1530,9 @@ document.addEventListener("submit",async e=>{
     if(/^\s*\d+\s*$/.test(q)) return open(normalise(q));
     return showResults();
   }
+  if(f.id==="pick-new"){ const c=$("#pn-cb").value.trim(); if(!c) return toast("Type the breaker number."); return finishLink(c); }
+  if(f.id==="add-breakers"){ const list=parseCbs($("#ab-nums").value); if(!list.length) return toast("Type breaker numbers, like 1-24."); const before=(board(view.arg).breakers||[]).length; list.forEach(c=>ensureBreaker(view.arg,c)); const n=board(view.arg).breakers.length-before; await save(); toast(n?`Added ${plural(n,"breaker")}`:"Those breakers are already on this board"); return render(); }
+  if(f.id==="breaker-form"){ const k=curBreaker(); k.label=$("#k-label").value.trim(); k.phase=$("#k-phase").value; await save(); toast("Breaker saved"); return render(); }
   if(f.id==="log-form"){ const v=$("#log-text").value.trim(); if(!v) return; light(view.arg).history.push({d:today(),t:v}); await save(); toast("Logged"); return render(); }
   if(f.id==="board-form"){
     if(!draft.code){ const c=normalise($("#b-code").value); if(!c) return toast("Scan or type the board's tag number."); if(light(c)||board(c)) return toast(`Tag ${c} is already in use. Use a blank tag.`); draft.code=c; }
@@ -1457,9 +1546,11 @@ document.addEventListener("submit",async e=>{
     idState=null; await save(); toast("Fitting type saved"); return go("type",rec.id);
   }
   if(f.id==="light-form"){
-    const rec={...draft,cb:$("#f-cb").value.trim(),phase:$("#f-phase").value,location:$("#f-loc").value.trim(),type:$("#f-type").value,fitting:ftype($("#f-type").value)?.name||"",notes:$("#f-notes").value.trim(),driverModel:$("#f-drv").value.trim(),driverLocation:$("#f-drvloc").value.trim()};
+    const rec={...draft,cb:$("#f-cb").value.trim().toUpperCase(),location:$("#f-loc").value.trim(),type:$("#f-type").value,fitting:ftype($("#f-type").value)?.name||"",notes:$("#f-notes").value.trim(),driverModel:$("#f-drv").value.trim(),driverLocation:$("#f-drvloc").value.trim()};
     const i=DB.lights.findIndex(l=>l.code===rec.code);
     if(i<0){ rec.history=[{d:today(),t:$("#f-job").value.trim()||"Tagged."}]; DB.lights.push(rec); } else DB.lights[i]=rec;
+    if(rec.board&&rec.cb) ensureBreaker(rec.board,rec.cb);
+    if(rec.board) rememberLink(rec);
     await save(); toast("Saved"); return go("light",rec.code);
   }
 });
@@ -1475,6 +1566,7 @@ document.addEventListener("change",async e=>{
     if(view.name==="board"){ board(view.arg).photos=draft.photos; await save(); }
     if(view.name==="light"){ light(view.arg)[k]=draft[k]; await save(); toast("Photo saved"); }
     if(view.name==="type"){ ftype(view.arg)[k]=draft[k]; await save(); toast("Photo saved"); }
+    if(view.name==="breaker"){ curBreaker().photos=draft.photos; await save(); toast("Photo saved"); }
   }
   if(t.id==="id-input" && t.files[0]){ const file=t.files[0]; t.value=""; try{ await identifyPhoto(file); }catch{ toast("Couldn't read that photo."); } return; }
   if(t.id==="scan-input" && t.files[0]){
