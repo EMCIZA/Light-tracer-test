@@ -160,8 +160,8 @@ button.big svg{width:26px;height:26px}
 .locknote{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .locknote svg{width:18px;height:18px;flex:0 0 auto}
 .err{color:var(--danger);font-size:14px;font-weight:600}
-#lock{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:45;display:flex;align-items:center;justify-content:center;padding:16px}
-#lock form{width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+#lock,#notice{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:45;display:flex;align-items:center;justify-content:center;padding:16px}
+#lock form,#notice .panel{width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
 .shake{animation:shake .3s}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 @media (prefers-reduced-motion:reduce){.shake{animation:none}}
@@ -178,6 +178,13 @@ button.big svg{width:26px;height:26px}
   <main id="app" class="wrap" style="padding:0;width:100%"></main>
 </div>
 <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+<div id="notice" hidden>
+  <section class="panel" role="alertdialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-msg">
+    <div class="row" style="align-items:center"><span class="ic" style="--c:#d97706;flex:0 0 auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.01"/></svg></span><h2 id="notice-title" style="flex:1 1 auto">Still being tested</h2></div>
+    <p class="muted" id="notice-msg">Which driver? may not be accurate yet. It's still learning from photos of your fittings. Always check the driver's label before ordering or fitting one.</p>
+    <div class="row"><button type="button" id="notice-cancel">Cancel</button><button type="button" class="primary" id="notice-ok">OK</button></div>
+  </section>
+</div>
 <div id="lock" hidden>
   <form class="panel" id="lock-form" role="dialog" aria-modal="true" aria-labelledby="lock-title">
     <h2 id="lock-title">Unlock editing</h2>
@@ -1340,7 +1347,9 @@ document.addEventListener("click",async e=>{
       await setPw(null); unlocked=false; toast("Password removed. Anyone can edit now."); return go("home");
     }
     case "scan": return scan();
-    case "identify": return $("#id-input").click();
+    case "identify": $("#notice").hidden=false; return setTimeout(()=>$("#notice-ok").focus(),30);
+    case "notice-cancel": $("#notice").hidden=true; return;
+    case "notice-ok": $("#notice").hidden=true; return $("#id-input").click();
     case "learn-yes": { const T=ftype(view.arg); if(idState&&!T.photos.includes(idState.photo)){ T.photos.push(idState.photo); if(T.photos.length>15) T.photos.splice(0,1); await save(); } toast(`Saved your photo to ${T.name}`); idState=null; return render(); }
     case "learn-no": idState=null; return render();
     case "del-type": {
@@ -1400,7 +1409,8 @@ document.addEventListener("click",async e=>{
 const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hidden) closeLock(); $("#viewer").hidden=true; } });
+$("#notice").addEventListener("click",e=>{ if(e.target.id==="notice") $("#notice").hidden=true; });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hidden) closeLock(); $("#notice").hidden=true; $("#viewer").hidden=true; } });
 ["pointerdown","keydown","input"].forEach(ev=>document.addEventListener(ev,()=>{ checkIdle(); lastAct=Date.now(); },{capture:true,passive:true}));
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkIdle(); });
 setInterval(checkIdle,30000);
