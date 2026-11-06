@@ -1,0 +1,1263 @@
+<meta charset="utf-8">
+<title>Light Tracer TEST</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LT Test">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f6b4f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+/* Layout: one narrow phone column. Tag numbers look like engraved traffolyte labels. */
+:root{
+  --bg:#eef1ee; --surface:#ffffff; --ink:#15201b; --muted:#5a6862; --line:#d3dad5;
+  --label:#f1b81f; --label-ink:#111; --accent:#0f6b4f; --on-accent:#ffffff; --danger:#b3261e;
+  --display:"Barlow Condensed","Arial Narrow","Helvetica Neue",system-ui,sans-serif;
+  --body:"Barlow",-apple-system,system-ui,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101614; --surface:#18201d; --ink:#e6ece8; --muted:#94a39c; --line:#2b3632;
+  --label:#f3bd30; --label-ink:#111; --accent:#4fc59a; --on-accent:#08130f; --danger:#f2867d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101614; --surface:#18201d; --ink:#e6ece8; --muted:#94a39c; --line:#2b3632;
+  --label:#f3bd30; --label-ink:#111; --accent:#4fc59a; --on-accent:#08130f; --danger:#f2867d; color-scheme:dark}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(48px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;display:flex;align-items:center;gap:8px;cursor:pointer;background:none;border:0;color:var(--ink);padding:0;white-space:nowrap}
+.brand svg{width:22px;height:22px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:30px} h2{font-size:22px}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:var(--body);font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)} .note{font-size:14px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.code{font-family:var(--mono);font-weight:700;background:var(--label);color:var(--label-ink);padding:2px 8px;border-radius:3px;letter-spacing:.06em;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);white-space:nowrap;display:inline-block;font-variant-numeric:tabular-nums}
+.code.lg{font-size:22px;padding:4px 12px}
+.lookup{display:flex;gap:8px}
+.lookup input{flex:1;min-width:0;font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.12em;padding:12px 14px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.lookup input:focus{outline:none;border-color:var(--accent)}
+button,.btn{font:600 16px var(--body);border-radius:8px;padding:12px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;text-align:center}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button.danger{color:var(--danger)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-within{outline:3px solid var(--label);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1 1 140px}
+.supply{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.supply>div{background:var(--surface);padding:10px 12px;min-width:0}
+.supply .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.supply .v{font-family:var(--display);font-size:28px;font-weight:700;overflow-wrap:anywhere;line-height:1.15}
+.supply .v.small{font-family:var(--body);font-size:16px;font-weight:500}
+.supply .wide{grid-column:1/-1}
+.list{display:flex;flex-direction:column}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border:0;border-top:1px solid var(--line);border-radius:0;cursor:pointer;background:none;text-align:left;justify-content:flex-start;font-weight:400;color:var(--ink);width:100%}
+.item:first-child{border-top:0}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-weight:600}
+.item .t span{color:var(--muted);font-size:14px}
+.cb{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);white-space:nowrap}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.photos.one{grid-template-columns:1fr}
+.photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block;background:var(--bg)}
+.photos .ph{position:relative}
+.photos .ph button{position:absolute;top:4px;right:4px;padding:2px 9px;font-size:13px}
+.empty{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);font-size:14px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600;color:var(--muted);min-width:0}
+label.f input,label.f select,label.f textarea{font:400 16px var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
+label.f textarea{min-height:64px;resize:vertical}
+.step{display:flex;align-items:center;gap:10px}
+.step i{font-style:normal;font-family:var(--mono);font-weight:700;width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}
+.sub{border-left:3px solid var(--label);padding-left:12px;display:flex;flex-direction:column;gap:12px}
+.hist{display:flex;flex-direction:column;gap:8px;font-size:15px}
+.hist div{display:flex;gap:10px}
+.hist time{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;padding-top:2px}
+.badge{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.newtag{display:flex;gap:12px;align-items:center;background:var(--label);color:var(--label-ink);border-radius:8px;padding:12px}
+.newtag b{font-family:var(--mono);font-size:22px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;max-width:calc(100% - 32px);z-index:30}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:40;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+#viewer img{max-height:100%;max-width:100%;object-fit:contain}
+.back{align-self:flex-start;padding:6px 10px;font-size:14px}
+.sheet{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:480px){.sheet{grid-template-columns:repeat(4,minmax(0,1fr))}.tagl .n{font-size:14px}}
+.tagl{background:#fff;color:#111;border:1px dashed #9aa19d;border-radius:6px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;break-inside:avoid}
+.tagl svg{width:100%;max-width:120px;height:auto;display:block}
+.tagl .n{font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:.08em}
+.tagl .k{background:#f1b81f;font-size:10px;font-weight:700;padding:1px 8px;letter-spacing:.06em}
+.big .sheet{grid-template-columns:repeat(2,minmax(0,1fr))}
+.big .tagl svg{max-width:200px}
+@media print{body *{visibility:hidden}#print-area,#print-area *{visibility:visible}#print-area{position:absolute;left:0;top:0;width:100%}.sheet{grid-template-columns:repeat(5,1fr)!important}@page{size:A4;margin:10mm}}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice button{flex-direction:column;padding:20px 12px;gap:6px;min-height:150px}
+.choice svg{width:40px;height:40px}
+.choice b{font-family:var(--display);font-size:24px}
+.choice span{font-size:13px;font-weight:400;color:var(--muted)}
+.linked{display:flex;gap:12px;align-items:center;border:2px solid var(--accent);border-radius:8px;padding:10px 12px}
+.linked .t{flex:1;min-width:0}.linked .t b{display:block}.linked .t span{font-size:14px;color:var(--muted)}
+.linked button{padding:6px 10px;font-size:14px}
+#scanner{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
+#scan-video{flex:1;min-height:0;width:100%;object-fit:cover}
+#scanner .aim{position:absolute;left:50%;top:42%;width:min(62vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid var(--label);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+#scanner .scan-ui{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;color:#fff;text-align:center;font-weight:600}
+#scanner .scan-ui button{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
+.thumb{width:64px;height:48px;object-fit:cover;border-radius:5px;border:1px solid var(--line);flex:0 0 auto;background:var(--bg)}
+.best{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:var(--accent);color:var(--on-accent);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.idphoto img{width:100%;max-height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+/* friendly home + view-only / editing mode */
+button>svg,.btn>svg{width:18px;height:18px;flex:0 0 auto}
+.hero{border-top:4px solid var(--accent)}
+.hello{font-size:14px;font-weight:600;color:var(--accent)}
+button.big{font-size:20px;padding:18px 16px;border-radius:12px}
+button.big svg{width:26px;height:26px}
+.lookup input::placeholder{font-family:var(--body);font-weight:400;letter-spacing:0;font-size:17px}
+.hero .lookup input{font-size:22px;letter-spacing:.06em}
+.lookup button svg{width:20px;height:20px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;padding:16px;gap:4px;border-radius:12px;min-height:118px;min-width:0}
+.tile svg{width:28px;height:28px;color:var(--accent);margin-bottom:4px}
+.tile b{font-family:var(--display);font-size:21px;line-height:1.1}
+.tile span{font-size:13px;font-weight:400;color:var(--muted)}
+.tile.lock svg{color:var(--muted)}
+.mode{padding:6px 12px;font-size:14px;border-radius:999px;gap:6px;white-space:nowrap}
+.mode svg{width:16px;height:16px}
+.mode[data-state="edit"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.locknote{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+.locknote svg{width:18px;height:18px;flex:0 0 auto}
+.err{color:var(--danger);font-size:14px;font-weight:600}
+#lock{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:45;display:flex;align-items:center;justify-content:center;padding:16px}
+#lock form{width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <button class="brand" id="home-btn" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>
+      Light Tracer <span class="badge" style="background:var(--label);color:var(--label-ink);border-color:var(--label)">TEST</span>
+    </button>
+    <button class="mode" id="mode-btn"></button>
+  </header>
+  <main id="app" class="wrap" style="padding:0;width:100%"></main>
+</div>
+<div id="lock" hidden>
+  <form class="panel" id="lock-form" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+    <h2 id="lock-title">Unlock editing</h2>
+    <p class="muted" id="lock-msg">Enter the editor password to add, change or delete records.</p>
+    <label class="f">Password<input type="password" id="lock-pw" autocomplete="current-password" required></label>
+    <p class="err" id="lock-err" hidden>That password isn't right. Try again.</p>
+    <div class="row"><button type="button" id="lock-cancel">Cancel</button><button class="primary">Unlock</button></div>
+  </form>
+</div>
+<div id="toast" hidden></div>
+<div id="viewer" hidden><img id="viewer-img" alt="Photo, full size"></div>
+<div id="scanner" hidden>
+  <video id="scan-video" playsinline muted autoplay></video>
+  <div class="aim" aria-hidden="true"></div>
+  <div class="scan-ui"><p>Point the camera at the QR tag</p><div class="row"><button id="scan-photo">Take a photo instead</button><button id="scan-cancel">Cancel</button></div></div>
+</div>
+<input type="file" id="id-input" accept="image/*" capture="environment" hidden>
+<input type="file" id="scan-input" accept="image/*" capture="environment" hidden>
+
+<script>
+/* Minimal QR encoder (byte mode, error correction M, versions 1-10). Works offline. */
+const QR=(()=>{
+  const ECC=[0,10,16,26,18,24,16,18,22,22,26], BLK=[0,1,1,1,2,2,4,4,4,5,5];
+  const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36;}return r;};
+  const dataCw=v=>Math.floor(raw(v)/8)-ECC[v]*BLK[v];
+  const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11d);z^=((y>>>i)&1)*x;}return z;};
+  function divisor(d){const r=new Array(d).fill(0);r[d-1]=1;let root=1;for(let i=0;i<d;i++){for(let j=0;j<d;j++){r[j]=mul(r[j],root);if(j+1<d)r[j]^=r[j+1];}root=mul(root,2);}return r;}
+  function remainder(data,div){const r=div.map(()=>0);for(const b of data){const f=b^r.shift();r.push(0);div.forEach((c,i)=>r[i]^=mul(c,f));}return r;}
+  function encode(text,forceMask){
+    const bytes=Array.from(new TextEncoder().encode(text));
+    let v=1;for(;v<=10;v++){if(4+(v<10?8:16)+8*bytes.length<=dataCw(v)*8)break;}
+    if(v>10)throw new Error("Text too long for QR");
+    const bits=[];const put=(val,n)=>{for(let i=n-1;i>=0;i--)bits.push((val>>>i)&1);};
+    put(4,4);put(bytes.length,v<10?8:16);bytes.forEach(b=>put(b,8));
+    const cap=dataCw(v)*8;put(0,Math.min(4,cap-bits.length));while(bits.length%8)bits.push(0);
+    const data=[];for(let i=0;i<bits.length;i+=8)data.push(parseInt(bits.slice(i,i+8).join(""),2));
+    for(let p=0xec;data.length<dataCw(v);p^=0xec^0x11)data.push(p);
+    // split into blocks, add error correction, interleave
+    const nb=BLK[v],el=ECC[v],rc=Math.floor(raw(v)/8),ns=nb-rc%nb,sl=Math.floor(rc/nb),div=divisor(el),blocks=[];
+    for(let i=0,k=0;i<nb;i++){const d=data.slice(k,k+sl-el+(i<ns?0:1));k+=d.length;const e=remainder(d,div);if(i<ns)d.push(0);blocks.push(d.concat(e));}
+    const cw=[];for(let i=0;i<blocks[0].length;i++)blocks.forEach((b,j)=>{if(i!==sl-el||j>=ns)cw.push(b[i]);});
+    // modules
+    const n=v*4+17,M=[...Array(n)].map(()=>Array(n).fill(false)),F=[...Array(n)].map(()=>Array(n).fill(false));
+    const set=(x,y,d)=>{M[y][x]=d;F[y][x]=true;};
+    for(let i=0;i<n;i++){set(6,i,i%2===0);set(i,6,i%2===0);}
+    const finder=(x,y)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy)),xx=x+dx,yy=y+dy;if(xx>=0&&xx<n&&yy>=0&&yy<n)set(xx,yy,d!==2&&d!==4);}};
+    finder(3,3);finder(n-4,3);finder(3,n-4);
+    if(v>1){const na=Math.floor(v/7)+2,step=Math.ceil((v*4+4)/(na*2-2))*2,pos=[6];for(let p=n-7;pos.length<na;p-=step)pos.splice(1,0,p);
+      pos.forEach((a,i)=>pos.forEach((b,j)=>{if((i===0&&j===0)||(i===0&&j===na-1)||(i===na-1&&j===0))return;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(a+dx,b+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);}));}
+    const format=mask=>{const d=mask;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);const b=((d<<10)|r)^0x5412,g=i=>((b>>>i)&1)===1;
+      for(let i=0;i<=5;i++)set(8,i,g(i));set(8,7,g(6));set(8,8,g(7));set(7,8,g(8));for(let i=9;i<15;i++)set(14-i,8,g(i));
+      for(let i=0;i<8;i++)set(n-1-i,8,g(i));for(let i=8;i<15;i++)set(8,n-15+i,g(i));set(8,n-8,true);};
+    format(0);
+    if(v>=7){let r=v;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1f25);const b=(v<<12)|r;for(let i=0;i<18;i++){const bit=((b>>>i)&1)===1,a=n-11+i%3,c=Math.floor(i/3);set(a,c,bit);set(c,a,bit);}}
+    let i=0;for(let right=n-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<n;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?n-1-vert:vert;if(!F[y][x]&&i<cw.length*8){M[y][x]=((cw[i>>>3]>>>(7-(i&7)))&1)===1;i++;}}}
+    const MASKS=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+    const apply=m=>{for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(!F[y][x]&&MASKS[m](x,y))M[y][x]=!M[y][x];};
+    const penalty=()=>{let p=0,dark=0;const line=get=>{let run=1;for(let k=1;k<n;k++){if(get(k)===get(k-1)){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}
+        for(let k=0;k+7<=n;k++){if(get(k)&&!get(k+1)&&get(k+2)&&get(k+3)&&get(k+4)&&!get(k+5)&&get(k+6)){const before=k>=4&&[1,2,3,4].every(t=>!get(k-t)),after=k+11<=n&&[7,8,9,10].every(t=>!get(k+t));if(before||after)p+=40;}}};
+      for(let y=0;y<n;y++){line(x=>M[y][x]);line(x=>M[x][y]);}
+      for(let y=0;y<n-1;y++)for(let x=0;x<n-1;x++){const c=M[y][x];if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1])p+=3;}
+      M.forEach(r=>r.forEach(c=>dark+=c));p+=(Math.ceil(Math.abs(dark*20-n*n*10)/(n*n))-1)*10;return p;};
+    let best=forceMask??0;
+    if(forceMask==null){let low=Infinity;for(let m=0;m<8;m++){apply(m);format(m);const p=penalty();if(p<low){low=p;best=m;}apply(m);}}
+    apply(best);format(best);
+    return {size:n,mask:best,version:v,dark:(x,y)=>M[y][x]};
+  }
+  function svg(text){const q=encode(text),b=4,s=q.size+b*2;let d="";for(let y=0;y<q.size;y++)for(let x=0;x<q.size;x++)if(q.dark(x,y))d+=`M${x+b} ${y+b}h1v1h-1z`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" shape-rendering="crispEdges"><rect width="${s}" height="${s}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;}
+  return {encode,svg};
+})();
+</script>
+<script>
+/* Minimal QR decoder for photos (versions 1-10, all error-correction levels). Works offline. */
+const QRDecode=(()=>{
+  /* ---- GF(256) and Reed-Solomon error correction ---- */
+  const EXP=new Array(512),LOG=new Array(256);
+  {let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11d;}for(let i=255;i<512;i++)EXP[i]=EXP[i-255];}
+  const mul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+  const div=(a,b)=>a?EXP[(LOG[a]+255-LOG[b])%255]:0;
+  const pow=(x,p)=>EXP[(((LOG[x]*p)%255)+255)%255];
+  const inv=x=>EXP[255-LOG[x]];
+  const pEval=(p,x)=>{let y=p[0];for(let i=1;i<p.length;i++)y=mul(y,x)^p[i];return y;};
+  const pScale=(p,x)=>p.map(c=>mul(c,x));
+  const pAdd=(p,q)=>{const r=new Array(Math.max(p.length,q.length)).fill(0);p.forEach((c,i)=>r[i+r.length-p.length]=c);q.forEach((c,i)=>r[i+r.length-q.length]^=c);return r;};
+  const pMul=(p,q)=>{const r=new Array(p.length+q.length-1).fill(0);for(let j=0;j<q.length;j++)for(let i=0;i<p.length;i++)r[i+j]^=mul(p[i],q[j]);return r;};
+  const pDivRem=(a,b)=>{const o=a.slice();for(let i=0;i<a.length-(b.length-1);i++){const c=o[i];if(c)for(let j=1;j<b.length;j++)if(b[j])o[i+j]^=mul(b[j],c);}return o.slice(o.length-(b.length-1));};
+  function rsCorrect(msg,nsym){
+    const synd=[0];for(let i=0;i<nsym;i++)synd.push(pEval(msg,pow(2,i)));
+    if(synd.every(s=>s===0))return msg.slice(0,msg.length-nsym);
+    // Berlekamp-Massey
+    let loc=[1],old=[1];
+    for(let i=0;i<nsym;i++){const K=i+1;let d=synd[K];for(let j=1;j<loc.length;j++)d^=mul(loc[loc.length-1-j],synd[K-j]);old=old.concat([0]);
+      if(d){if(old.length>loc.length){const nl=pScale(old,d);old=pScale(loc,inv(d));loc=nl;}loc=pAdd(loc,pScale(old,d));}}
+    while(loc.length&&loc[0]===0)loc.shift();
+    const errs=loc.length-1;if(errs*2>nsym)return null;
+    const rl=loc.slice().reverse(),pos=[];
+    for(let i=0;i<msg.length;i++)if(pEval(rl,pow(2,i))===0)pos.push(msg.length-1-i);
+    if(pos.length!==errs)return null;
+    // Forney
+    const coef=pos.map(p=>msg.length-1-p);
+    let eloc=[1];coef.forEach(c=>{eloc=pMul(eloc,pAdd([1],[pow(2,c),0]));});
+    const eval_=pDivRem(pMul(synd.slice().reverse(),eloc),[1].concat(new Array(eloc.length).fill(0))).reverse();
+    const X=coef.map(c=>pow(2,c)),out=msg.slice();
+    for(let i=0;i<X.length;i++){const xi=inv(X[i]);let lp=1;for(let j=0;j<X.length;j++)if(j!==i)lp=mul(lp,1^mul(xi,X[j]));
+      if(!lp)return null;const y=mul(X[i],pEval(eval_.slice().reverse(),xi));out[pos[i]]^=div(y,lp);}
+    for(let i=1;i<=nsym;i++)if(pEval(out,pow(2,i-1))!==0)return null;
+    return out.slice(0,msg.length-nsym);
+  }
+
+  /* ---- QR structure ---- */
+  const ECC={L:[0,7,10,15,20,26,18,20,24,30,18],M:[0,10,16,26,18,24,16,18,22,22,26],Q:[0,13,22,18,26,18,24,18,22,20,24],H:[0,17,28,22,16,22,28,26,26,24,28]};
+  const BLK={L:[0,1,1,1,1,1,2,2,2,2,4],M:[0,1,1,1,2,2,4,4,4,5,5],Q:[0,1,1,2,2,4,4,6,6,8,8],H:[0,1,1,2,4,4,4,5,6,8,8]};
+  const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36;}return r;};
+  const alignPos=v=>{if(v===1)return[];const n=v*4+17,na=Math.floor(v/7)+2,step=Math.ceil((v*4+4)/(na*2-2))*2,p=[6];for(let x=n-7;p.length<na;x-=step)p.splice(1,0,x);return p;};
+  function funcMask(v){
+    const n=v*4+17,F=[...Array(n)].map(()=>new Uint8Array(n)),s=(x,y)=>{if(x>=0&&y>=0&&x<n&&y<n)F[y][x]=1;};
+    for(let i=0;i<n;i++){s(6,i);s(i,6);}
+    for(const [cx,cy] of [[3,3],[n-4,3],[3,n-4]])for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)s(cx+dx,cy+dy);
+    const ap=alignPos(v),na=ap.length;ap.forEach((a,i)=>ap.forEach((b,j)=>{if((i===0&&j===0)||(i===0&&j===na-1)||(i===na-1&&j===0))return;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)s(a+dx,b+dy);}));
+    for(let i=0;i<=8;i++){s(8,i);s(i,8);}for(let i=0;i<8;i++){s(n-1-i,8);s(8,n-1-i);}
+    if(v>=7)for(let i=0;i<18;i++){const a=n-11+i%3,b=Math.floor(i/3);s(a,b);s(b,a);}
+    return F;
+  }
+  const FORMATS=[];for(let d=0;d<32;d++){let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);FORMATS.push([((d<<10)|r)^0x5412,d]);}
+  const MASKS=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const bitcount=x=>{let c=0;while(x){c+=x&1;x>>>=1;}return c;};
+
+  /* decode a module grid M[y][x] (true = dark) */
+  function decodeGrid(M){
+    const n=M.length,v=(n-17)/4;if(v<1||v>10||v%1)return null;
+    const g=(x,y)=>M[y][x]?1:0;
+    let b1=0,b2=0;
+    const r1=[];for(let i=0;i<=5;i++)r1.push(g(8,i));r1.push(g(8,7),g(8,8),g(7,8));for(let i=9;i<15;i++)r1.push(g(14-i,8));
+    const r2=[];for(let i=0;i<8;i++)r2.push(g(n-1-i,8));for(let i=8;i<15;i++)r2.push(g(8,n-15+i));
+    r1.forEach((b,i)=>b1|=b<<i);r2.forEach((b,i)=>b2|=b<<i);
+    let best=null,bd=99;for(const [f,d] of FORMATS){const e=Math.min(bitcount(f^b1),bitcount(f^b2));if(e<bd){bd=e;best=d;}}
+    if(bd>3)return null;
+    const ecl=["M","L","H","Q"][best>>3],mask=best&7,F=funcMask(v);
+    const bits=[];
+    for(let right=n-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<n;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?n-1-vert:vert;if(!F[y][x])bits.push(g(x,y)^(MASKS[mask](x,y)?1:0));}}
+    const total=Math.floor(raw(v)/8),cw=[];for(let i=0;i<total;i++){let b=0;for(let k=0;k<8;k++)b=(b<<1)|bits[i*8+k];cw.push(b);}
+    const nb=BLK[ecl][v],el=ECC[ecl][v],ns=nb-total%nb,sl=Math.floor(total/nb);
+    const blocks=[...Array(nb)].map((_,i)=>[]);let k=0;
+    for(let i=0;i<sl+1;i++)for(let j=0;j<nb;j++){if(i===sl-el&&j<ns)continue;blocks[j].push(cw[k++]);}
+    // blocks: short ones have sl, long ones sl+1; reorder so data then ecc
+    const data=[];
+    for(let j=0;j<nb;j++){const b=blocks[j];const fixed=rsCorrect(b,el);if(!fixed)return null;data.push(...fixed);}
+    // parse segments
+    let p=0;const rd=n2=>{let r=0;for(let i=0;i<n2;i++){const byte=data[(p>>3)];if(byte===undefined)return -1;r=(r<<1)|((byte>>(7-(p&7)))&1);p++;}return r;};
+    const AN="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";let out=[],text="";
+    while(p+4<=data.length*8){const mode=rd(4);if(mode<=0)break;
+      if(mode===1){let c=rd(v<10?10:12);while(c>=3){const d=rd(10);text+=String(d).padStart(3,"0");c-=3;}if(c===2)text+=String(rd(7)).padStart(2,"0");else if(c===1)text+=String(rd(4));}
+      else if(mode===2){let c=rd(v<10?9:11);while(c>=2){const d=rd(11);text+=AN[Math.floor(d/45)]+AN[d%45];c-=2;}if(c===1)text+=AN[rd(6)];}
+      else if(mode===4){const c=rd(v<10?8:16);const bytes=[];for(let i=0;i<c;i++)bytes.push(rd(8));try{text+=new TextDecoder().decode(new Uint8Array(bytes));}catch{text+=String.fromCharCode(...bytes);}}
+      else if(mode===7){rd(8);}
+      else break;}
+    return text||null;
+  }
+
+  function formatDist(M){const n=M.length,g=(x,y)=>M[y][x]?1:0;let b1=0;const r1=[];for(let i=0;i<=5;i++)r1.push(g(8,i));r1.push(g(8,7),g(8,8),g(7,8));for(let i=9;i<15;i++)r1.push(g(14-i,8));r1.forEach((b,i)=>b1|=b<<i);let bd=99;for(const [f] of FORMATS)bd=Math.min(bd,bitcount(f^b1));return bd;}
+  /* ---- image: binarize (block-based, like ZXing's hybrid binarizer) ---- */
+  function binarize(gray,w,h){
+    const B=8,bw=Math.ceil(w/B),bh=Math.ceil(h/B),bp=new Float32Array(bw*bh),out=new Uint8Array(w*h);
+    for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let mn=255,mx=0,sum=0,c=0;
+      for(let y=by*B;y<Math.min(h,by*B+B);y++)for(let x=bx*B;x<Math.min(w,bx*B+B);x++){const v=gray[y*w+x];sum+=v;c++;if(v<mn)mn=v;if(v>mx)mx=v;}
+      let avg=sum/c;
+      if(mx-mn<=24){avg=mn/2;if(by>0&&bx>0){const nb=(bp[(by-1)*bw+bx]+2*bp[by*bw+bx-1]+bp[(by-1)*bw+bx-1])/4;if(mn<nb)avg=nb;}}
+      bp[by*bw+bx]=avg;}
+    for(let by=0;by<bh;by++)for(let bx=0;bx<bw;bx++){let s=0,c=0;
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const yy=Math.min(bh-1,Math.max(0,by+dy)),xx=Math.min(bw-1,Math.max(0,bx+dx));s+=bp[yy*bw+xx];c++;}
+      const t=s/c;
+      for(let y=by*B;y<Math.min(h,by*B+B);y++)for(let x=bx*B;x<Math.min(w,bx*B+B);x++)out[y*w+x]=gray[y*w+x]<=t?1:0;}
+    return out;
+  }
+
+  /* ---- finder patterns ---- */
+  function findFinders(bin,w,h){
+    const inb=(x,y)=>x>=0&&y>=0&&x<w&&y<h, at=(x,y)=>bin[y*w+x];
+    const ok=c=>{const t=c[0]+c[1]+c[2]+c[3]+c[4];if(t<7)return false;const m=t/7,v=m/1.5;return Math.abs(m-c[0])<v&&Math.abs(m-c[1])<v&&Math.abs(3*m-c[2])<3*v&&Math.abs(m-c[3])<v&&Math.abs(m-c[4])<v;};
+    function cross(cx,cy,dx,dy,max){
+      const c=[0,0,0,0,0];let i=0,x,y;
+      const P=k=>{x=Math.round(cx-k*dx);y=Math.round(cy-k*dy);},N=k=>{x=Math.round(cx+k*dx);y=Math.round(cy+k*dy);};
+      P(i);while(inb(x,y)&&at(x,y)===1){c[2]++;i++;P(i);}if(!inb(x,y))return null;
+      while(inb(x,y)&&at(x,y)===0&&c[1]<=max){c[1]++;i++;P(i);}if(!inb(x,y)||c[1]>max)return null;
+      while(inb(x,y)&&at(x,y)===1&&c[0]<=max){c[0]++;i++;P(i);}if(c[0]>max)return null;
+      i=1;N(i);while(inb(x,y)&&at(x,y)===1){c[2]++;i++;N(i);}if(!inb(x,y))return null;
+      while(inb(x,y)&&at(x,y)===0&&c[3]<max){c[3]++;i++;N(i);}if(!inb(x,y)||c[3]>=max)return null;
+      while(inb(x,y)&&at(x,y)===1&&c[4]<max){c[4]++;i++;N(i);}if(c[4]>=max)return null;
+      if(!ok(c))return null;
+      return [i-c[4]-c[3]-c[2]/2,c[0]+c[1]+c[2]+c[3]+c[4]];
+    }
+    const cands=[];
+    function handle(c,xEnd,y){
+      const tot=c[0]+c[1]+c[2]+c[3]+c[4],cx=xEnd-c[4]-c[3]-c[2]/2,max=c[2]*2;
+      const v=cross(cx,y,0,1,max);if(!v)return;const cy=y+v[0];
+      const hz=cross(cx,cy,1,0,max);if(!hz)return;const fx=cx+hz[0];
+      if(Math.abs(v[1]-tot)>tot*0.6)return;
+      const ms=(tot+v[1]+hz[1])/21;
+      for(const k of cands){if(Math.abs(k.x-fx)<=Math.max(k.m,ms)*2.5&&Math.abs(k.y-cy)<=Math.max(k.m,ms)*2.5&&Math.abs(k.m-ms)<Math.max(k.m,ms)*0.6){k.x=(k.x*k.n+fx)/(k.n+1);k.y=(k.y*k.n+cy)/(k.n+1);k.m=(k.m*k.n+ms)/(k.n+1);k.n++;return;}}
+      cands.push({x:fx,y:cy,m:ms,n:1});
+    }
+    for(let y=0;y<h;y++){const c=[0,0,0,0,0];let st=0;
+      for(let x=0;x<w;x++){
+        if(at(x,y)===1){if(st&1)st++;c[st]++;}
+        else if((st&1)===0){
+          if(st===4){if(ok(c))handle(c,x,y);c[0]=c[2];c[1]=c[3];c[2]=c[4];c[3]=1;c[4]=0;st=3;}
+          else{st++;c[st]++;}
+        } else c[st]++;
+      }
+      if(st===4&&ok(c))handle(c,w,y);
+    }
+    return cands;
+  }
+  function pickThree(cands){
+    const maxN=Math.max(0,...cands.map(c=>c.n));
+    let list=cands.filter(c=>c.n>=Math.max(2,maxN*0.2));if(list.length<3)list=cands.slice();
+    list=list.sort((a,b)=>b.n-a.n).slice(0,10);
+    const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),out=[];
+    for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++)for(let k=j+1;k<list.length;k++){
+      const p=[list[i],list[j],list[k]],ms=p.map(q=>q.m),mm=Math.max(...ms),mn=Math.min(...ms);if(mm>mn*1.8)continue;
+      const ds=[[d(p[0],p[1]),2],[d(p[0],p[2]),1],[d(p[1],p[2]),0]].sort((a,b)=>a[0]-b[0]);
+      const [a,b,c]=ds;if(a[0]<mn*7)continue;
+      const geo=Math.abs(a[0]-b[0])/b[0]+Math.abs(c[0]*c[0]-a[0]*a[0]-b[0]*b[0])/(c[0]*c[0]);
+      const weak=1-Math.min(...p.map(q=>q.n))/maxN;
+      const score=geo+(mm-mn)/mm*0.5+weak*0.5;
+      if(geo>1.2)continue;
+      const tl=p[c[1]],o=p.filter(q=>q!==tl);let[tr,bl]=o;
+      if((tr.x-tl.x)*(bl.y-tl.y)-(tr.y-tl.y)*(bl.x-tl.x)<0)[tr,bl]=[bl,tr];
+      out.push({score,tl,tr,bl});}
+    return out.sort((a,b)=>a.score-b.score).slice(0,3);
+  }
+  /* ---- perspective ---- */
+  function solve(A,b){const n=b.length;for(let i=0;i<n;i++){let mx=i;for(let r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[mx][i]))mx=r;[A[i],A[mx]]=[A[mx],A[i]];[b[i],b[mx]]=[b[mx],b[i]];if(Math.abs(A[i][i])<1e-12)return null;
+    for(let r=i+1;r<n;r++){const f=A[r][i]/A[i][i];for(let c=i;c<n;c++)A[r][c]-=f*A[i][c];b[r]-=f*b[i];}}
+    const x=new Array(n);for(let i=n-1;i>=0;i--){let s=b[i];for(let c=i+1;c<n;c++)s-=A[i][c]*x[c];x[i]=s/A[i][i];}return x;}
+  function homography(src,dst){const A=[],b=[];for(let i=0;i<4;i++){const[x,y]=src[i],[u,v]=dst[i];A.push([x,y,1,0,0,0,-u*x,-u*y]);b.push(u);A.push([0,0,0,x,y,1,-v*x,-v*y]);b.push(v);}
+    const h=solve(A,b);if(!h)return null;return (x,y)=>{const z=h[6]*x+h[7]*y+1;return[(h[0]*x+h[1]*y+h[2])/z,(h[3]*x+h[4]*y+h[5])/z];};}
+
+  function sampleGrid(bin,w,h,map,n){
+    const at=(x,y)=>{x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<w&&y<h?bin[y*w+x]:0;};
+    const M=[];for(let y=0;y<n;y++){const row=[];for(let x=0;x<n;x++){let s=0;for(const[dx,dy]of[[0.5,0.5],[0.35,0.35],[0.65,0.35],[0.35,0.65],[0.65,0.65]]){const[px,py]=map(x+dx,y+dy);s+=at(px,py);}row.push(s>=3);}M.push(row);}
+    return M;
+  }
+  function findAlign(bin,w,h,map3,ax,ay,mod){
+    // search near the predicted alignment centre for a dark dot ringed by light then dark (template follows the code's own axes)
+    const [px,py]=map3(ax,ay),at=(x,y)=>{x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<w&&y<h?bin[y*w+x]:0;};
+    const off=[];for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){const q=map3(ax+i,ay+j);off.push([q[0]-px,q[1]-py,Math.max(Math.abs(i),Math.abs(j))===1?0:1]);}
+    let best=null,bs=-1;const R=Math.round(mod*5),st=Math.max(1,Math.round(mod/3));
+    for(let dy=-R;dy<=R;dy+=st)for(let dx=-R;dx<=R;dx+=st){const cx=px+dx,cy=py+dy;let s=0;for(const[ox,oy,want]of off)if(at(cx+ox,cy+oy)===want)s++;
+      if(s>bs||(s===bs&&Math.hypot(dx,dy)<Math.hypot(best[0]-px,best[1]-py))){bs=s;best=[cx,cy];}}
+    if(bs<21)return null;
+    // refine: centroid of the dark centre dot
+    let sx=0,sy=0,c=0;const r=Math.max(1,Math.round(mod*0.6));for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)if(at(best[0]+x,best[1]+y)===1){sx+=x;sy+=y;c++;}
+    return c?[best[0]+sx/c,best[1]+sy/c]:best;
+  }
+  function decodeImage(gray,w,h){
+    const bin=binarize(gray,w,h),c=findFinders(bin,w,h);
+    for(const f of pickThree(c)){const r=tryTriple(bin,w,h,f);if(r)return r;}
+    return null;
+  }
+  function tryTriple(bin,w,h,f){
+    const {tl,tr,bl}=f,mod=(tl.m+tr.m+bl.m)/3;
+    const est=Math.round(((Math.hypot(tr.x-tl.x,tr.y-tl.y)+Math.hypot(bl.x-tl.x,bl.y-tl.y))/2)/mod)+7;
+    const tries=[];let base=est;switch(base&3){case 0:base++;break;case 2:base--;break;case 3:base-=2;break;}
+    for(const n of [base,base+4,base-4,base+8,base-8,25,21,29,33])if(n>=21&&n<=57&&!tries.includes(n))tries.push(n);
+    for(const n of tries){
+      const v=(n-17)/4,src3=[[3.5,3.5],[n-3.5,3.5],[3.5,n-3.5]],dst3=[[tl.x,tl.y],[tr.x,tr.y],[bl.x,bl.y]];
+      const br=[tr.x+bl.x-tl.x,tr.y+bl.y-tl.y];
+      const affine=homography([...src3,[n-3.5,n-3.5]],[...dst3,br]);if(!affine)continue;
+      const maps=[affine];
+      if(v>=2){const ap=alignPos(v),a=ap[ap.length-1]+0.5,pt=findAlign(bin,w,h,affine,a,a,mod);if(pt){const hm=homography([...src3,[a,a]],[...dst3,pt]);if(hm)maps.unshift(hm);}}
+      for(const map of maps){const M=sampleGrid(bin,w,h,map,n);const t=decodeGrid(M);if(t)return t;}
+    }
+    return null;
+  }
+  function debug(gray,w,h){const bin=binarize(gray,w,h),c=findFinders(bin,w,h),f=pickThree(c)[0];return {cands:c.length,strong:c.filter(k=>k.n>=2).length,picked:!!f,f,c:c.slice().sort((a,b)=>b.n-a.n).slice(0,6)};}
+  function toGray(data,w,h){const g=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)g[i]=(data[j]*77+data[j+1]*150+data[j+2]*29)>>8;return g;}
+  /* decode from a canvas or image: tries a couple of scales */
+  function run(src,sx,sy,sw,sh,max){
+    const k=Math.min(2.5,max/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k);
+    const c=document.createElement("canvas");c.width=w;c.height=h;const g=c.getContext("2d",{willReadFrequently:true});
+    g.imageSmoothingQuality="high";g.drawImage(src,sx,sy,sw,sh,0,0,w,h);
+    return decodeImage(toGray(g.getImageData(0,0,w,h).data,w,h),w,h);
+  }
+  /* decode from an image, canvas or video frame; quick=true for live video (fewer passes) */
+  function fromSource(src,quick){
+    const W=src.videoWidth||src.naturalWidth||src.width,H=src.videoHeight||src.naturalHeight||src.height;
+    const cw=W*0.55,ch=H*0.55,cx=(W-cw)/2,cy=(H-ch)/2;
+    const passes=quick?[[0,0,W,H,800],[cx,cy,cw,ch,800]]:[[0,0,W,H,900],[cx,cy,cw,ch,1000],[0,0,W,H,1600],[W*0.15,H*0.15,W*0.7,H*0.7,1400],[0,0,W,H,600]];
+    for(const p of passes){const r=run(src,...p);if(r)return r;}
+    return null;
+  }
+  return {decodeImage,decodeGrid,fromSource,toGray,debug,_rs:rsCorrect};
+})();
+</script>
+<script>
+/* Offline photo matcher for light fittings. Finds the lit part of the fitting and describes its shape,
+   its surround and nearby edges, then compares against saved photos. */
+const Match=(()=>{
+  const N=128;
+  function features(img){
+    const W=img.naturalWidth||img.videoWidth||img.width,H=img.naturalHeight||img.videoHeight||img.height;
+    const k=N/Math.max(W,H),w=Math.max(8,Math.round(W*k)),h=Math.max(8,Math.round(H*k));
+    const c=document.createElement("canvas");c.width=w;c.height=h;const g=c.getContext("2d",{willReadFrequently:true});
+    g.drawImage(img,0,0,w,h);const d=g.getImageData(0,0,w,h).data;
+    const gray=new Float32Array(w*h),sat=new Float32Array(w*h);let mean=0;
+    for(let i=0,j=0;i<w*h;i++,j+=4){const r=d[j]/255,gg=d[j+1]/255,b=d[j+2]/255,mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);gray[i]=0.3*r+0.59*gg+0.11*b;sat[i]=mx?(mx-mn)/mx:0;mean+=gray[i];}
+    mean/=w*h;
+    // bright pixels -> connected components -> pick the most fitting-like (big, bright, near centre)
+    const sorted=Array.from(gray).sort((a,b)=>b-a),thr=Math.min(0.985,Math.max(mean+0.1,sorted[Math.floor(w*h*0.004)]-0.06));
+    const lab=new Int32Array(w*h).fill(-1),comps=[];
+    for(let i=0;i<w*h;i++){if(gray[i]<thr||lab[i]>=0)continue;const q=[i];lab[i]=comps.length;let n=0,sx=0,sy=0,sb=0;
+      while(q.length){const p=q.pop(),x=p%w,y=(p-x)/w;n++;sx+=x;sy+=y;sb+=gray[p];
+        for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]])if(nx>=0&&ny>=0&&nx<w&&ny<h){const np=ny*w+nx;if(lab[np]<0&&gray[np]>=thr){lab[np]=comps.length;q.push(np);}}}
+      comps.push({id:comps.length,n,cx:sx/n,cy:sy/n,b:sb/n});}
+    let best=null,bs=-1;for(const cp of comps){if(cp.n<6)continue;const dc=Math.hypot(cp.cx/w-0.5,cp.cy/h-0.5);const s=cp.n*(1.2-dc)*cp.b;if(s>bs){bs=s;best=cp;}}
+    let elong=1,fill=1,area=0,ring=1,ori=new Float32Array(8),rect=0;
+    if(best){
+      let a=0,b=0,cc=0;const pts=[];
+      for(let i=0;i<w*h;i++)if(lab[i]===best.id){const x=i%w,y=(i-x)/w,dx=x-best.cx,dy=y-best.cy;a+=dx*dx;b+=dy*dy;cc+=dx*dy;pts.push([dx,dy]);}
+      const n=best.n;a/=n;b/=n;cc/=n;const t=(a+b)/2,q=Math.sqrt(Math.max(0,((a-b)/2)**2+cc*cc)),l1=t+q,l2=Math.max(0.05,t-q);
+      elong=Math.sqrt(l1/l2);area=n/(w*h);
+      // fill vs. ellipse of same moments (ellipse ~1, rectangle ~1.27)
+      fill=n/(Math.PI*4*Math.sqrt(l1*l2)+1e-6);
+      // rectangularity along principal axis: share of points within the moment box
+      const th=0.5*Math.atan2(2*cc,a-b),co=Math.cos(th),si=Math.sin(th),A=Math.sqrt(3*l1),B=Math.sqrt(3*l2);let inb=0;
+      for(const[dx,dy]of pts){const u=dx*co+dy*si,v=-dx*si+dy*co;if(Math.abs(u)<=A&&Math.abs(v)<=B)inb++;}rect=inb/n;
+      // surround: brightness just outside the lit area relative to the whole photo (dark housing vs ceiling)
+      const R=Math.sqrt(l1)*2.2,Rb=Math.sqrt(l2)*2.2;let rs=0,rn=0;
+      for(let y=Math.max(0,Math.floor(best.cy-R-6));y<Math.min(h,best.cy+R+6);y++)for(let x=Math.max(0,Math.floor(best.cx-R-6));x<Math.min(w,best.cx+R+6);x++){
+        const dx=x-best.cx,dy=y-best.cy,u=(dx*co+dy*si)/(A*1.0),v=(-dx*si+dy*co)/(B*1.0),r=Math.max(Math.abs(u),Math.abs(v));
+        if(r>1.15&&r<1.9&&lab[y*w+x]!==best.id){rs+=gray[y*w+x];rn++;}}
+      ring=rn?(rs/rn)/(mean+0.05):1;
+      // edge directions near the fitting, measured relative to its long axis
+      for(let y=Math.max(1,Math.floor(best.cy-R*1.3));y<Math.min(h-1,best.cy+R*1.3);y++)for(let x=Math.max(1,Math.floor(best.cx-R*1.3));x<Math.min(w-1,best.cx+R*1.3);x++){
+        const p=(yy,xx)=>gray[yy*w+xx],gx=p(y,x+1)-p(y,x-1),gy=p(y+1,x)-p(y-1,x),m=Math.hypot(gx,gy);if(m<0.08)continue;
+        let an=Math.atan2(gy,gx)-th;an=((an%Math.PI)+Math.PI)%Math.PI;ori[Math.min(7,Math.floor(an/Math.PI*8))]+=m;}
+      let s=0;for(const v of ori)s+=v;if(s)for(let i=0;i<8;i++)ori[i]/=s;
+    }
+    return {elong,fill,area,ring,rect,ori:Array.from(ori),found:!!best};
+  }
+  const lg=(a,b,s)=>Math.min(1,Math.abs(Math.log((a+1e-3)/(b+1e-3)))/s);
+  function similarity(f,g){
+    if(!f.found||!g.found)return 0;
+    let o=0;for(let i=0;i<8;i++)o+=Math.abs(f.ori[i]-g.ori[i]);o/=2;
+    const dist=0.38*lg(f.elong,g.elong,1.3)+0.12*Math.min(1,Math.abs(f.fill-g.fill)/0.45)+0.1*Math.min(1,Math.abs(f.rect-g.rect)/0.3)
+      +0.2*lg(f.ring,g.ring,0.9)+0.08*lg(f.area,g.area,2.5)+0.12*o;
+    return 1-dist;
+  }
+  return {features,similarity};
+})();
+</script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = d => { try { return new Date(d+"T00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}); } catch { return d; } };
+const uid = () => "b" + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+/* ---------- example "photos" (drawn, so the mock-up has something to show) ---------- */
+function exBoard(name, hl){
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#3a3f3c"/><rect x="40" y="20" width="320" height="260" rx="6" fill="#c9ccc8" stroke="#8b8f8b" stroke-width="3"/><rect x="60" y="34" width="280" height="22" fill="#fff"/><text x="200" y="50" font-family="Arial" font-weight="bold" font-size="14" text-anchor="middle" fill="#111">${name}</text>`;
+  for(let r=0;r<2;r++){ s+=`<rect x="60" y="${80+r*100}" width="280" height="70" fill="#9da19d"/>`;
+    for(let i=0;i<12;i++){ const n=r*12+i+1, x=64+i*23, y=86+r*100, on=n===hl;
+      s+=`<rect x="${x}" y="${y}" width="19" height="58" rx="2" fill="${on?"#f1b81f":"#f4f4f2"}" stroke="#555"/><rect x="${x+6}" y="${y+18}" width="7" height="16" fill="#333"/><text x="${x+9.5}" y="${y+54}" font-family="Arial" font-size="9" text-anchor="middle" fill="#111">${n}</text>`; } }
+  if(hl){ const r=hl>12?1:0, i=(hl-1)%12, x=64+i*23+9.5, y=r?150:50; s+=`<path d="M${x} ${y+(r?100:0)} l-8 ${r?14:-14} h16z" fill="#e5331f" transform="translate(0 ${r?-4:30})"/>`; }
+  s+=`<rect x="0" y="270" width="400" height="30" fill="rgba(0,0,0,.6)"/><text x="200" y="290" font-family="Arial" font-size="13" text-anchor="middle" fill="#fff">EXAMPLE PHOTO${hl?` · CB ${hl}`:""}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
+}
+function exRiser(){
+  const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#d8d6cf"/><rect x="120" y="20" width="160" height="250" fill="#7d8a86" stroke="#4d5754" stroke-width="4"/><rect x="250" y="130" width="12" height="40" rx="3" fill="#222"/><rect x="150" y="50" width="100" height="26" fill="#fff"/><text x="200" y="68" font-family="Arial" font-weight="bold" font-size="13" text-anchor="middle" fill="#c00">ELECTRICAL</text><rect x="0" y="270" width="400" height="30" fill="rgba(0,0,0,.6)"/><text x="200" y="290" font-family="Arial" font-size="13" text-anchor="middle" fill="#fff">EXAMPLE PHOTO · RISER DOOR</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
+}
+function exDriver(){
+  const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#8d9590"/><rect x="40" y="90" width="320" height="110" rx="6" fill="#e9ebe8" stroke="#555" stroke-width="3"/><rect x="60" y="105" width="190" height="80" fill="#fff" stroke="#999"/><text x="70" y="128" font-family="Arial" font-weight="bold" font-size="15" fill="#111">LED DRIVER</text><text x="70" y="150" font-family="Arial" font-size="12" fill="#111">36W  900mA  CC</text><text x="70" y="168" font-family="Arial" font-size="12" fill="#111">220-240V~ 50/60Hz</text><circle cx="300" cy="125" r="9" fill="#444"/><circle cx="300" cy="165" r="9" fill="#444"/><rect x="0" y="270" width="400" height="30" fill="rgba(0,0,0,.6)"/><text x="200" y="290" font-family="Arial" font-size="13" text-anchor="middle" fill="#fff">EXAMPLE PHOTO · DRIVER LABEL</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
+}
+function exLight(kind){
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#e9e8e3"/>`;
+  for(let x=0;x<=400;x+=100) s+=`<line x1="${x}" y1="0" x2="${x}" y2="300" stroke="#b9b8b2" stroke-width="3"/>`;
+  for(let y=0;y<=300;y+=100) s+=`<line x1="0" y1="${y}" x2="400" y2="${y}" stroke="#b9b8b2" stroke-width="3"/>`;
+  s+= kind==="down" ? `<circle cx="200" cy="140" r="34" fill="#fff" stroke="#999" stroke-width="4"/><circle cx="200" cy="140" r="24" fill="#fffbe6"/>` : `<rect x="100" y="100" width="200" height="100" fill="#fffef2" stroke="#999" stroke-width="3"/>`;
+  s+=`<rect x="${kind==="down"?236:304}" y="${kind==="down"?150:160}" width="34" height="24" rx="2" fill="#f1b81f"/><text x="${kind==="down"?253:321}" y="${kind==="down"?167:177}" font-family="Courier" font-weight="bold" font-size="10" text-anchor="middle" fill="#111">TAG</text><rect x="0" y="270" width="400" height="30" fill="rgba(0,0,0,.6)"/><text x="200" y="290" font-family="Arial" font-size="13" text-anchor="middle" fill="#fff">EXAMPLE PHOTO · LIGHT WITH TAG</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
+}
+
+/* ---------- storage: IndexedDB on this phone only ---------- */
+let DB=null;
+function idb(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open("light-tracer-test",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}catch(e){rej(e)} }); }
+async function loadKV(key){ try{ const db=await idb(); return await new Promise(res=>{ const q=db.transaction("kv").objectStore("kv").get(key); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }); }catch{ return null; } }
+async function putKV(key,val){ try{ const db=await idb(); const s=db.transaction("kv","readwrite").objectStore("kv"); val==null?s.delete(key):s.put(val,key); }catch{} }
+const loadData = () => loadKV("data");
+async function save(){
+  await putKV("data",DB);
+  featCache.size>300&&featCache.clear();
+}
+
+/* ---------- editor password ----------
+   With a password set, the app opens view-only: anyone can scan, search and look things up.
+   Adding, changing or deleting needs the password. It's kept on this phone (not in backups)
+   as a salted SHA-256 hash. It stops casual changes; it isn't encryption of the records. */
+const SHA_K=(()=>{ const k=[]; for(let p=2;k.length<64;p++){ let pr=true; for(let d=2;d*d<=p;d++) if(p%d===0){ pr=false; break; } if(pr) k.push((Math.cbrt(p)%1)*2**32|0); } return k; })();
+function sha256(str){
+  const b=new TextEncoder().encode(str), l=b.length, n=((l+8)>>6)+1<<4, w=new Uint32Array(n), W=new Uint32Array(64), H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let i=0;i<l;i++) w[i>>2]|=b[i]<<(24-(i&3)*8);
+  w[l>>2]|=0x80<<(24-(l&3)*8); w[n-1]=l*8;
+  const r=(x,k)=>(x>>>k)|(x<<(32-k));
+  for(let j=0;j<n;j+=16){
+    for(let t=0;t<64;t++) W[t]=t<16?w[j+t]:(r(W[t-2],17)^r(W[t-2],19)^(W[t-2]>>>10))+W[t-7]+(r(W[t-15],7)^r(W[t-15],18)^(W[t-15]>>>3))+W[t-16];
+    let [a,bb,c,d,e,f,g,h]=H;
+    for(let t=0;t<64;t++){ const t1=h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+SHA_K[t]+W[t]|0, t2=(r(a,2)^r(a,13)^r(a,22))+((a&bb)^(a&c)^(bb&c))|0; h=g; g=f; f=e; e=d+t1|0; d=c; c=bb; bb=a; a=t1+t2|0; }
+    [a,bb,c,d,e,f,g,h].forEach((v,i)=>H[i]=H[i]+v|0);
+  }
+  return H.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
+}
+function hashPw(pw,salt){ let h=sha256(salt+":"+pw); for(let i=0;i<3000;i++) h=sha256(h+salt); return h; }
+let AUTH=null, unlocked=false, lastAct=Date.now(), afterUnlock=null;
+const IDLE_MS=10*60*1000;
+const can = () => !AUTH || unlocked;
+const checkPw = pw => !!AUTH && hashPw(pw,AUTH.salt)===AUTH.hash;
+async function setPw(pw){
+  if(pw==null){ AUTH=null; } else { const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,"0")).join(""); AUTH={salt,hash:hashPw(pw,salt)}; }
+  await putKV("auth",AUTH);
+}
+/* views that change records need editing access */
+const EDIT_VIEWS=new Set(["editBoard","editLight","editType","linkLight","make","data","settings"]);
+function askUnlock(then,msg){
+  afterUnlock=then||null;
+  $("#lock-msg").textContent=msg||"Enter the editor password to add, change or delete records.";
+  $("#lock-err").hidden=true; $("#lock-pw").value=""; $("#lock").hidden=false;
+  setTimeout(()=>$("#lock-pw").focus(),30);
+}
+function closeLock(){ $("#lock").hidden=true; afterUnlock=null; }
+/* returns true (and asks for the password) when the person can't edit right now */
+function needEdit(msg){ if(can()) return false; askUnlock(()=>render(),msg); return true; }
+function lockNow(msg){
+  unlocked=false;
+  if(EDIT_VIEWS.has(view.name)||view.name==="blank") go("home"); else render();
+  toast(msg||"Locked. View only now.");
+}
+function checkIdle(){ if(AUTH&&unlocked&&Date.now()-lastAct>IDLE_MS) lockNow("Editing locked after 10 minutes without use."); }
+function seed(){
+  return { v:3, example:true, lastPrinted:1080,
+    types:[
+      {id:"tp1",name:"600x600 LED panel",driverModel:"36W 900mA constant current",driverLocation:"Above the ceiling tile beside the panel",notes:"Example type.",photos:[exLight("panel")],driverPhotos:[exDriver()]},
+      {id:"tp2",name:"90mm LED downlight",driverModel:"10W 300mA constant current",driverLocation:"Lying on the ceiling tile next to the downlight",notes:"Example type.",photos:[exLight("down")],driverPhotos:[]}
+    ],
+    boards:[
+      {code:"1001",name:"DB-L3-A",location:"Level 3, east riser cupboard (key 92)",fedFrom:"MSB Ground, CB 12",notes:"Lighting chassis on the left. Door sticks, lift and pull.",photos:[exRiser(),exBoard("DB-L3-A",0)]},
+      {code:"1002",name:"DB-L3-B",location:"Level 3, west riser beside fire stairs",fedFrom:"MSB Ground, CB 13",notes:"",photos:[exBoard("DB-L3-B",0)]}
+    ],
+    lights:[
+      {code:"1003",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor outside lift lobby",fitting:"600x600 LED panel",notes:"",driverLocation:"This one is above the tile toward the lifts.",cbPhotos:[exBoard("DB-L3-A",14)],lightPhotos:[exLight("panel")],history:[{d:"2026-10-28",t:"Replaced driver."}]},
+      {code:"1004",type:"tp1",board:"1001",cb:"14",phase:"L1",location:"L3 corridor near kitchenette",fitting:"600x600 LED panel",notes:"Same circuit as 1003.",cbPhotos:[exBoard("DB-L3-A",14)],lightPhotos:[exLight("panel")],history:[{d:"2026-11-02",t:"Tagged, no fault."}]},
+      {code:"1005",type:"tp2",board:"1002",cb:"7",phase:"L3",location:"Meeting room 3.12, downlight by window",fitting:"90mm LED downlight",notes:"On motion sensor in ceiling.",cbPhotos:[exBoard("DB-L3-B",7)],lightPhotos:[exLight("down")],history:[{d:"2026-11-04",t:"Downlight swapped."}]}
+    ]};
+}
+/* older saved data (boards without tag numbers) is converted once */
+function migrate(d){
+  if(!d || d.v===3) return d;
+  const out={v:3,example:d.example,lastPrinted:d.lastPrinted||0,boards:[],lights:[]}, map={};
+  let next=Math.max(1000,d.lastPrinted||0,...(d.tags||[]).map(t=>+t.code||0))+1;
+  (d.boards||[]).forEach(b=>{ const code=String(next++); map[b.id]=code; out.boards.push({code,name:b.name,location:b.location,fedFrom:b.fedFrom,notes:b.notes,photos:b.photos||[]}); });
+  (d.tags||[]).forEach(t=>out.lights.push({...t,board:map[t.board]||""}));
+  out.lastPrinted=Math.max(out.lastPrinted,next-1);
+  return out;
+}
+function tidy(d){ d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
+const board = c => DB.boards.find(b=>b.code===c);
+const light = c => DB.lights.find(l=>l.code===c);
+const ftype = id => DB.types.find(t=>t.id===id);
+
+/* ---------- helpers ---------- */
+let toastT;
+function toast(m){ const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3000); }
+const normalise = raw => { const d=String(raw||"").replace(/\D/g,""); return d||null; };
+function open(code){
+  if(!code) return toast("Type the number printed on the tag.");
+  if(light(code)) return go("light",code);
+  if(board(code)) return go("board",code);
+  go("blank",code);
+}
+function resizeImage(file,max=1200){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ const img=new Image(); img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.72)); }; img.onerror=rej; img.src=r.result; }; r.onerror=rej; r.readAsDataURL(file); });
+}
+function photos(list,key,{edit=false,one=false}={}){
+  edit=edit&&can();
+  if(!list.length) return `<div class="empty">No photo yet.</div>`;
+  return `<div class="photos${one&&list.length===1?" one":""}">${list.map((p,i)=>`<div class="ph"><img src="${p}" data-view alt="Photo ${i+1}">${edit?`<button type="button" data-del="${key}:${i}" aria-label="Remove photo">✕</button>`:""}</div>`).join("")}</div>`;
+}
+const addPhoto = (key,label) => !can() ? "" : `<label class="btn">${label}<input type="file" data-add="${key}" accept="image/*" multiple hidden></label>`;
+let scanCallback=null, stream=null, scanTimer=null;
+function photoScan(cb){ scanCallback=cb||null; $("#scan-input").click(); }
+/* accept only Light Tracer tags (or a bare number) */
+function tagFromText(t){ if(!t) return null; t=String(t).trim(); if(/^LIGHT TRACER\s*\d+$/i.test(t)||/^\d{1,8}$/.test(t)) return normalise(t); return "x"; }
+function gotTag(t,cb){
+  const code=tagFromText(t);
+  if(code==="x"){ toast("That QR code isn't a Light Tracer tag."); return false; }
+  try{ navigator.vibrate?.(60); }catch{}
+  (cb||open)(code); return true;
+}
+async function scan(cb){
+  if(FRAMED || !navigator.mediaDevices?.getUserMedia) return photoScan(cb);
+  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false}); }
+  catch{ toast("Camera not available, so take a photo of the tag."); return photoScan(cb); }
+  scanCallback=cb||null;
+  const v=$("#scan-video"); v.srcObject=stream; $("#scanner").hidden=false; try{ await v.play(); }catch{}
+  let busy=false;
+  const tick=()=>{
+    if(!stream) return;
+    if(!busy && v.readyState>=2 && v.videoWidth){ busy=true; let t=null; try{ t=QRDecode.fromSource(v,true); }catch{} busy=false;
+      if(t && tagFromText(t)!=="x"){ const c=scanCallback; stopScan(); gotTag(t,c); return; } }
+    scanTimer=setTimeout(tick,100);
+  };
+  tick();
+}
+function stopScan(){ clearTimeout(scanTimer); if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } const v=$("#scan-video"); if(v) v.srcObject=null; $("#scanner").hidden=true; }
+
+/* ---------- views ---------- */
+let view={name:"home"}, draft=null;
+function go(name,arg){
+  if(EDIT_VIEWS.has(name)&&!can()) return askUnlock(()=>go(name,arg));
+  view={name,arg}; render(); window.scrollTo(0,0);
+}
+const svgI = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON={
+  qr:svgI(`<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4"/>`),
+  search:svgI(`<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>`),
+  camera:svgI(`<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>`),
+  board:svgI(`<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8v3M11 8v3M14 8v3M8 14v3M11 14v3M14 14v3"/>`),
+  types:svgI(`<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>`),
+  tag:svgI(`<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>`),
+  backup:svgI(`<path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/>`),
+  key:svgI(`<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>`),
+  lock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`),
+  unlock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>`),
+  gear:svgI(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>`)
+};
+function renderHeader(){
+  const b=$("#mode-btn");
+  if(!AUTH){ b.dataset.state="open"; b.innerHTML=`${ICON.gear} Settings`; b.setAttribute("aria-label","Settings and editor password"); }
+  else if(unlocked){ b.dataset.state="edit"; b.innerHTML=`${ICON.unlock} Editing · Lock`; b.setAttribute("aria-label","Editing is on. Tap to lock"); }
+  else { b.dataset.state="view"; b.innerHTML=`${ICON.lock} View only`; b.setAttribute("aria-label","View only. Tap to unlock editing"); }
+}
+const plural = (n,w) => `${n} ${w}${n===1?"":"s"}`;
+const back = (to="home",arg) => `<button class="back" data-go="${to}"${arg?` data-arg="${esc(arg)}"`:""}>← Back</button>`;
+const lightName = l => l.location || `Light ${l.code}`;
+function lightItem(l){ const b=board(l.board); return `<button class="item" data-open="${l.code}"><span class="code">${l.code}</span><span class="t"><b>${esc(lightName(l))}</b><span>${b?`${esc(b.name)}${l.cb?` · CB ${esc(l.cb)}`:""}`:"Not linked to a board yet"}</span></span><span class="cb">${l.history.at(-1)?fmtDate(l.history.at(-1).d):""}</span></button>`; }
+function typeItem(T){ const th=T.photos[0]; const n=DB.lights.filter(l=>l.type===T.id).length; return `<button class="item" data-type="${T.id}">${th?`<img class="thumb" src="${th}" alt="">`:`<span class="thumb"></span>`}<span class="t"><b>${esc(T.name)}</b><span>${esc(T.driverModel||"Driver not recorded")}</span></span><span class="cb">${n} light${n===1?"":"s"}</span></button>`; }
+const featCache=new Map();
+async function featOf(src){ if(featCache.has(src)) return featCache.get(src); const img=new Image(); img.src=src; try{ await img.decode(); }catch{ return null; } const f=Match.features(img); featCache.set(src,f); return f; }
+let idState=null;
+async function identifyPhoto(file){
+  toast("Checking your fitting types…");
+  const photo=await resizeImage(file,900), f=await featOf(photo), ranked=[];
+  for(const T of DB.types){
+    const refs=[...T.photos,...DB.lights.filter(l=>l.type===T.id).flatMap(l=>l.lightPhotos)];
+    let best=0,ref=null; for(const r of refs){ const g=await featOf(r); if(f&&g){ const sc=Match.similarity(f,g); if(sc>best){ best=sc; ref=r; } } }
+    ranked.push({id:T.id,score:refs.length?best:0,ref});
+  }
+  ranked.sort((a,b)=>b.score-a.score);
+  idState={photo,ranked}; $("#toast").hidden=true; go("identify");
+}
+function boardItem(b){ return `<button class="item" data-open="${b.code}"><span class="code">${b.code}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.location)}</span></span><span class="cb">${DB.lights.filter(l=>l.board===b.code).length} lights</span></button>`; }
+
+const V={
+home(){
+  const recent=[...DB.lights].sort((a,b)=>(b.history.at(-1)?.d||"").localeCompare(a.history.at(-1)?.d||"")).slice(0,6);
+  const unlinked=DB.lights.filter(l=>!board(l.board));
+  const hr=new Date().getHours(), hello=hr<12?"Good morning":hr<18?"Good afternoon":"Good evening";
+  const tile=(attr,icon,title,sub,cls="")=>`<button class="tile${cls}" ${attr}>${icon}<b>${title}</b><span>${sub}</span></button>`;
+  const tiles=[
+    tile(`id="identify"`,ICON.camera,"Which driver?","Snap a light to match its type"),
+    tile(`data-go="boards"`,ICON.board,"Boards",plural(DB.boards.length,"board")),
+    tile(`data-go="types"`,ICON.types,"Fitting types",plural(DB.types.length,"type")),
+    ...(can()?[
+      tile(`data-go="make"`,ICON.tag,"Make QR tags","Print blank tags"),
+      tile(`data-go="data"`,ICON.backup,"Backup","Save or restore records"),
+      tile(`data-go="settings"`,ICON.key,"Password",AUTH?"Change or remove":"Not set yet")
+    ]:[ tile(`id="unlock"`,ICON.lock,"Unlock editing","Add, change or delete"," lock") ])
+  ];
+  return `
+  <section class="panel hero">
+    <p class="hello">${hello}</p>
+    <h1>Find a light or board</h1>
+    <button class="primary big" id="scan">${ICON.qr} Scan a tag</button>
+    <form class="lookup" id="lookup-form" role="search"><input id="lookup" type="search" autocomplete="off" placeholder="Tag no., board or place" aria-label="Tag number or search"><button aria-label="Find">${ICON.search}</button></form>
+    <div class="list" id="results" hidden></div>
+    <div class="stats"><span><b>${DB.lights.length}</b> lights</span>·<span><b>${DB.boards.length}</b> boards</span>·<span><b>${DB.types.length}</b> fitting types</span></div>
+  </section>
+  ${AUTH&&!can()?`<p class="locknote">${ICON.lock}<span>View only. You can scan, search and look things up. Unlock to make changes.</span></p>`:""}
+  <div class="tiles">${tiles.join("")}</div>
+  ${!AUTH?`<section class="panel"><h3>Protect your records</h3><p class="note">Right now anyone using this phone can change or delete records. Set an editor password and everyone else gets view-only access.</p><button data-go="settings">${ICON.key} Set a password</button></section>`:""}
+  ${DB.example?`<section class="panel"><p class="note">This has example data in it. Try <b>1001</b> (a board), <b>1003</b> (a light on it) or <b>1006</b> (a blank tag). Clear it when you start for real.</p>${can()?`<button class="danger" id="clear-ex">Clear example data</button>`:""}</section>`:""}
+  ${unlinked.length?`<section class="panel"><h3>Waiting for a board</h3><p class="note">These lights are tagged but not linked yet.${can()?" Open one and scan its board's tag.":""}</p><div class="list">${unlinked.map(lightItem).join("")}</div></section>`:""}
+  <section class="panel"><h3>Recently worked on</h3>
+    <div class="list">${recent.map(lightItem).join("")||`<div class="empty">No lights tagged yet. Scan a blank tag to start.</div>`}</div>
+  </section>`;
+},
+boards(){
+  return `${back()}
+  <section class="panel"><div class="row" style="align-items:center"><h2 style="flex:1 1 auto">Boards</h2>${can()?`<button class="primary" data-go="editBoard" data-arg="" style="flex:0 0 auto">+ Create a board</button>`:""}</div>
+    <div class="list">${DB.boards.map(boardItem).join("")||`<div class="empty">No boards yet.${can()?" Create one, or scan a blank tag on a board.":""}</div>`}</div>
+  </section>`;
+},
+types(){
+  return `${back()}
+  <section class="panel"><div class="row" style="align-items:center"><h2 style="flex:1 1 auto">Fitting types</h2>${can()?`<button class="primary" data-go="editType" data-arg="" style="flex:0 0 auto">+ Add a type</button>`:""}</div>
+    <div class="list">${DB.types.map(typeItem).join("")||`<div class="empty">No fitting types yet.${can()?" Add the types used in the building, each with its driver and a few photos.":""}</div>`}</div>
+  </section>`;
+},
+settings(){
+  return `${back()}
+  <form class="panel" id="pw-form">
+    <h2>${AUTH?"Change the editor password":"Set an editor password"}</h2>
+    <p class="muted">With a password set, the app opens in view-only mode. Anyone can scan tags, search and look things up. Adding, changing or deleting records, photos and jobs needs the password.</p>
+    ${AUTH?`<label class="f">Current password<input type="password" id="pw-cur" autocomplete="current-password" required></label>`:""}
+    <label class="f">New password<input type="password" id="pw-new" autocomplete="new-password" minlength="4" required></label>
+    <label class="f">Type it again<input type="password" id="pw-new2" autocomplete="new-password" minlength="4" required></label>
+    <p class="note">At least 4 characters. Write it down somewhere safe, it can't be recovered. It's kept on this phone only and isn't part of backups.</p>
+    <button class="primary">${AUTH?"Change password":"Set password"}</button>
+  </form>
+  ${AUTH?`<section class="panel"><h3>Turn the password off</h3><p class="note">Everyone using this phone will be able to change records again.</p>
+    <label class="f">Current password<input type="password" id="pw-off" autocomplete="current-password"></label>
+    <button class="danger" id="pw-remove">Remove password</button></section>
+  <section class="panel"><h3>Auto-lock</h3><p class="note">Editing locks itself after 10 minutes without use, when the app is closed, or when you tap <b>Editing · Lock</b> at the top.</p></section>`:""}`;
+},
+blank(code){
+  if(!can()) return `${back()}
+  <div class="newtag"><b>${esc(code)}</b><span>This tag isn't set up yet.</span></div>
+  <section class="panel"><p class="muted">Setting up a new tag needs the editor password.</p><button class="primary" id="unlock">${ICON.lock} Unlock to set it up</button></section>`;
+  return `${back()}
+  <div class="newtag"><b>${esc(code)}</b><span>Blank tag. What's it stuck on?</span></div>
+  <div class="choice">
+    <button data-go="linkLight" data-arg="${esc(code)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><b>A light</b><span>Scan the board's tag next to link it</span></button>
+    <button data-go="editBoard" data-arg="${esc(code)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8v3M11 8v3M14 8v3M8 14v3M11 14v3M14 14v3"/></svg><b>A board</b><span>Add its name, location and photos</span></button>
+
+  </div>`;
+},
+linkLight(code){
+  draft={code,board:"",cb:"",phase:"",location:"",fitting:"",notes:"",cbPhotos:[],lightPhotos:[],driverPhotos:[],driverModel:"",driverLocation:"",history:[]};
+  return `${back("blank",code)}
+  <section class="panel">
+    <div class="row" style="align-items:center"><h2 style="flex:1 1 auto">Link light to its board</h2><span class="code lg" style="flex:0 0 auto">${esc(code)}</span></div>
+    <p class="muted">Go to the board this light runs from and scan the board's tag. That's all it needs.</p>
+    <button class="primary" id="link-scan">Scan the board's tag</button>
+    <div class="lookup"><input id="link-num" inputmode="numeric" placeholder="or type board tag no." aria-label="Board tag number" style="font-size:18px"><button type="button" id="link-type">Link</button></div>
+    ${DB.boards.length?`<label class="f">Or pick it<select id="link-pick"><option value="">Choose a board…</option>${DB.boards.map(b=>`<option value="${b.code}">${esc(b.name)} (${b.code}), ${esc(b.location)}</option>`).join("")}</select></label>`:""}
+  </section>
+  <section class="panel"><p class="note">Can't get to the board right now? Save the light and link it later. It goes on the "Waiting for a board" list.</p><button id="save-unlinked">Save, link later</button></section>`;
+},
+light(code){
+  const l=light(code), b=board(l.board), T=ftype(l.type);
+  draft={...l,lightPhotos:[...l.lightPhotos],driverPhotos:[...l.driverPhotos]};
+  return `${back()}
+  <div class="row">${can()?`<button data-go="editLight" data-arg="${l.code}">${l.location||l.cb||l.lightPhotos.length?"Edit":"Add details"}</button>`:""}<button data-go="qr" data-arg="${l.code}">Show QR</button>${can()?`<button class="danger" id="del">Delete</button>`:""}</div>
+  <section class="panel">
+    <div class="row" style="align-items:center"><span class="code lg" style="flex:0 0 auto">${l.code}</span><span class="muted" style="flex:1 1 auto">${esc(ftype(l.type)?.name||l.fitting)}</span></div>
+    <h1>${esc(lightName(l))}</h1>
+    ${b?`<div class="supply">
+      <div${l.cb?"":` class="wide"`}><div class="k">Board</div><div class="v">${esc(b.name)}</div></div>
+      ${l.cb?`<div><div class="k">Circuit breaker</div><div class="v">CB ${esc(l.cb)}${l.phase?` <span class="cb">${esc(l.phase)}</span>`:""}</div></div>`:""}
+      <div class="wide"><div class="k">Board is at</div><div class="v small">${esc(b.location)}</div></div>
+      ${b.notes?`<div class="wide"><div class="k">Access notes</div><div class="v small">${esc(b.notes)}</div></div>`:""}
+    </div>`:can()?`<div class="newtag"><span>Not linked to a board yet. Go to the board and scan its tag.</span></div><button class="primary" id="link-scan">Scan the board's tag</button>`:`<div class="newtag"><span>Not linked to a board yet.</span></div>`}
+  </section>
+  <section class="panel"><h3>The light</h3><div id="ph-lightPhotos">${photos(draft.lightPhotos,"lightPhotos",{edit:true,one:true})}</div>${addPhoto("lightPhotos","+ Photo of the light")}${l.notes?`<p>${esc(l.notes)}</p>`:""}</section>
+  <section class="panel"><h3>Driver</h3>
+    ${T?`<div class="supply"><div class="wide"><div class="k">Fitting type</div><div class="v small">${esc(T.name)}</div></div>${T.driverModel?`<div class="wide"><div class="k">Driver it needs</div><div class="v">${esc(T.driverModel)}</div></div>`:""}${T.driverLocation?`<div class="wide"><div class="k">Usually found</div><div class="v small">${esc(T.driverLocation)}</div></div>`:""}</div>
+      ${T.driverPhotos.length?photos(T.driverPhotos,""):""}<button data-type="${T.id}">Open fitting type →</button>`
+     :`<p class="note">No fitting type set, so the driver it needs isn't known yet.</p>${can()?`<button data-go="editLight" data-arg="${l.code}">Set fitting type</button>`:""}`}
+    ${l.driverModel||l.driverLocation?`<div class="supply">${l.driverModel?`<div class="wide"><div class="k">This light's driver</div><div class="v small">${esc(l.driverModel)}</div></div>`:""}${l.driverLocation?`<div class="wide"><div class="k">This light's driver is at</div><div class="v small">${esc(l.driverLocation)}</div></div>`:""}</div>`:""}
+    ${draft.driverPhotos.length?`<div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>`:`<div id="ph-driverPhotos"></div>`}${addPhoto("driverPhotos","+ Photo of this light's driver")}
+  </section>
+  ${b?`${l.cbPhotos.length?`<section class="panel"><h3>Breaker</h3>${photos(l.cbPhotos,"",{one:true})}</section>`:""}
+  <section class="panel"><h3>Board ${esc(b.name)}</h3>${photos(b.photos,"")}<button data-open="${b.code}">Open board ${esc(b.code)} →</button></section>`:""}
+  <section class="panel"><h3>Job history</h3>
+    <div class="hist">${l.history.slice().reverse().map(h=>`<div><time>${fmtDate(h.d)}</time><span>${esc(h.t)}</span></div>`).join("")||`<p class="muted">Nothing logged yet.</p>`}</div>
+    ${can()?`<form class="lookup" id="log-form"><input id="log-text" style="font:400 16px var(--body);letter-spacing:0" placeholder="e.g. Replaced lamp" aria-label="Log a job"><button>Log</button></form>`:`<button id="unlock">${ICON.lock} Unlock to log a job</button>`}
+  </section>`;
+},
+board(code){
+  const b=board(code); const ls=DB.lights.filter(l=>l.board===code).sort((x,y)=>(parseFloat(x.cb)||0)-(parseFloat(y.cb)||0));
+  draft={...b,photos:[...b.photos]};
+  return `${back()}
+  <div class="row">${can()?`<button data-go="editBoard" data-arg="${b.code}">Edit</button>`:""}<button data-go="qr" data-arg="${b.code}">Show QR</button>${can()?`<button class="danger" id="del">Delete</button>`:""}</div>
+  <section class="panel">
+    <div class="row" style="align-items:center"><span class="code lg" style="flex:0 0 auto">${b.code}</span><span class="badge" style="flex:0 0 auto">Board</span></div>
+    <h1>${esc(b.name)}</h1>
+    <div class="supply">
+      <div class="wide"><div class="k">Location</div><div class="v small">${esc(b.location)}</div></div>
+      <div class="wide"><div class="k">Fed from</div><div class="v small">${esc(b.fedFrom||"Not recorded")}</div></div>
+      ${b.notes?`<div class="wide"><div class="k">Access notes</div><div class="v small">${esc(b.notes)}</div></div>`:""}
+    </div>
+  </section>
+  <section class="panel"><h3>Photos</h3><div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>${addPhoto("photos","+ Add photos")}</section>
+  <section class="panel"><h3>Lights on this board, by breaker</h3><div class="list">${ls.map(lightItem).join("")||`<div class="empty">No lights linked yet. Tag a light, then scan this board's tag.</div>`}</div></section>`;
+},
+type(id){
+  const T=ftype(id), ls=DB.lights.filter(l=>l.type===id), learned=ls.reduce((a,l)=>a+l.lightPhotos.length,0);
+  draft={...T,photos:[...T.photos],driverPhotos:[...T.driverPhotos]};
+  const ask=idState&&idState.picked===id&&!T.photos.includes(idState.photo);
+  const lightPics=ls.flatMap(l=>l.lightPhotos.map(ph=>({ph,code:l.code})));
+  return `${ask?`<button class="back" data-go="identify">← Back to results</button>`:back()}
+  ${ask&&can()?`<section class="panel"><h3>Is this the right fitting?</h3><div class="idphoto"><img src="${idState.photo}" alt="Your photo" data-view></div><p class="note">If it is, save your photo here so it matches better next time.</p><div class="row"><button class="primary" id="learn-yes">Yes, save my photo here</button><button id="learn-no">No, don't save it</button></div></section>`:""}
+  ${can()?`<div class="row"><button data-go="editType" data-arg="${T.id}">Edit</button><button class="danger" id="del-type">Delete</button></div>`:""}
+  <section class="panel">
+    <span class="badge" style="align-self:flex-start">Fitting type</span>
+    <h1>${esc(T.name)}</h1>
+    <div class="supply">
+      <div class="wide"><div class="k">Driver it needs</div><div class="v">${esc(T.driverModel||"Not recorded")}</div></div>
+      ${T.driverLocation?`<div class="wide"><div class="k">Usually found</div><div class="v small">${esc(T.driverLocation)}</div></div>`:""}
+      ${T.notes?`<div class="wide"><div class="k">Notes</div><div class="v small">${esc(T.notes)}</div></div>`:""}
+    </div>
+  </section>
+  <section class="panel"><h3>Driver photos</h3><div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>${addPhoto("driverPhotos","+ Photo of the driver")}</section>
+  <section class="panel"><h3>Photos of this fitting</h3>
+    <p class="note">Identify compares against these.${can()?" Several angles help. If a photo here isn't this fitting, tap its ✕ to remove it.":""}</p>
+    <div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>${addPhoto("photos","+ Add photos of this fitting")}</section>
+  ${lightPics.length?`<section class="panel"><h3>Also compared: photos of lights set to this type</h3><p class="note">To remove one, open that light and remove the photo there, or change its fitting type.</p><div class="photos">${lightPics.map(x=>`<div class="ph"><img src="${x.ph}" data-view alt="Light ${x.code}"><button type="button" data-open="${x.code}" style="left:4px;right:auto">${x.code}</button></div>`).join("")}</div></section>`:""}
+  <section class="panel"><h3>Lights of this type</h3><div class="list">${ls.map(lightItem).join("")||`<div class="empty">No lights set to this type yet.</div>`}</div></section>`;
+},
+editType(id){
+  const ex=id&&id!=="from-photo"&&ftype(id);
+  const T=ex||{id:"tp"+Date.now().toString(36),name:"",driverModel:"",driverLocation:"",notes:"",photos:id==="from-photo"&&idState?[idState.photo]:[],driverPhotos:[]};
+  draft={...T,photos:[...T.photos],driverPhotos:[...T.driverPhotos]};
+  return `${back(ex?"type":"home",ex?id:undefined)}
+  <form class="panel" id="type-form">
+    <h2>${ex?"Edit fitting type":"New fitting type"}</h2>
+    <label class="f">Name<input id="t-name" value="${esc(T.name)}" placeholder="e.g. 1200mm IP65 LED batten" required></label>
+    <label class="f">Driver it needs<input id="t-drv" value="${esc(T.driverModel)}" placeholder="e.g. 40W 1050mA constant current"></label>
+    <label class="f">Where the driver usually is<input id="t-drvloc" value="${esc(T.driverLocation)}" placeholder="e.g. Inside the fitting, right-hand end"></label>
+    <label class="f">Notes<textarea id="t-notes" placeholder="Supplier, part number, how to open it">${esc(T.notes)}</textarea></label>
+    <h3>Photos of the fitting</h3>
+    <div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>${addPhoto("photos","+ Add photos of this fitting")}
+    <h3>Driver photos</h3>
+    <div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>${addPhoto("driverPhotos","+ Photo of the driver")}
+    <button class="primary">Save fitting type</button>
+  </form>`;
+},
+identify(){
+  if(!idState) return V.home();
+  const r=idState.ranked;
+  return `${back()}
+  <section class="panel">
+    <h2>Which fitting is it?</h2>
+    <div class="idphoto"><img src="${idState.photo}" alt="Your photo" data-view></div>
+    ${r.length?`<p class="note">Best match first. Each thumbnail is the saved photo it matched against. Tap the right one to see its driver.</p>`:`<p class="note">No fitting types yet, so there's nothing to compare with. Save this photo as a new type.</p>`}
+  </section>
+  ${r.length?`<section class="panel"><div class="list">${r.map((x,i)=>{const T=ftype(x.id),th=T.photos[0]||DB.lights.find(l=>l.type===T.id&&l.lightPhotos.length)?.lightPhotos[0];
+    const pic=x.ref||th, gap=r.length>1?x.score-r[1].score:1;
+    return `<button class="item" data-pick="${T.id}">${pic?`<img class="thumb" src="${pic}" alt="">`:`<span class="thumb"></span>`}<span class="t"><b>${esc(T.name)}</b><span>${esc(T.driverModel||"Driver not recorded")}</span></span>${i===0&&x.score>0.6?(gap>=0.05?`<span class="best">Best match</span>`:`<span class="badge">Close call</span>`):""}</button>`;}).join("")}</div></section>
+  ${r.length>1&&r[0].score-r[1].score<0.05?`<p class="note">The top two are close. Check the thumbnails. If a type shows a photo that isn't that fitting, open the type and remove it.</p>`:""}`:""}
+  ${can()?`<section class="panel"><button data-go="editType" data-arg="from-photo">${r.length?"None of these, add a new type":"Save as a new fitting type"}</button></section>`:""}`;
+},
+editBoard(code){
+  const ex=code&&board(code);
+  const b=ex||{code:code||"",name:"",location:"",fedFrom:"",notes:"",photos:[]};
+  draft={...b,photos:[...b.photos]};
+  return `${back(ex?"board":code?"blank":"home",code||undefined)}
+  <form class="panel" id="board-form">
+    <div class="row" style="align-items:center"><h2 style="flex:1 1 auto">${ex?"Edit board":"New board"}</h2><span class="code lg" style="flex:0 0 auto" id="b-codechip" ${b.code?"":"hidden"}>${esc(b.code)}</span></div>
+    ${code?"":`<div class="sub"><b>QR tag for this board</b><p class="note">Stick a blank tag on the board, then scan it or type its number.</p>
+      <button type="button" class="primary" id="assign-scan">Scan the board's tag</button>
+      <label class="f">Tag number<input id="b-code" inputmode="numeric" placeholder="e.g. 1012" required></label></div>`}
+    <label class="f">Board name, as labelled<input id="b-name" value="${esc(b.name)}" placeholder="e.g. DB-L4-A" required></label>
+    <label class="f">Where is it?<input id="b-loc" value="${esc(b.location)}" placeholder="e.g. Level 4, east riser cupboard" required></label>
+    <label class="f">Fed from<input id="b-fed" value="${esc(b.fedFrom)}" placeholder="e.g. MSB Ground, CB 14"></label>
+    <label class="f">Access notes<textarea id="b-notes" placeholder="Keys, codes, door quirks">${esc(b.notes)}</textarea></label>
+    <h3>Photos: door, cupboard, chassis, circuit schedule</h3>
+    <div id="ph-photos">${photos(draft.photos,"photos",{edit:true})}</div>
+    ${addPhoto("photos","+ Add photos")}
+    <button class="primary">${ex?"Save changes":"Save board"}</button>
+  </form>`;
+},
+editLight(code){
+  const ex=light(code);
+  const l=ex||{code,board:"",cb:"",phase:"",location:"",fitting:"",notes:"",cbPhotos:[],lightPhotos:[],driverPhotos:[],driverModel:"",driverLocation:"",history:[]};
+  draft={...l,cbPhotos:[...l.cbPhotos],lightPhotos:[...l.lightPhotos],driverPhotos:[...l.driverPhotos]};
+  return `${back(ex?"light":"blank",code)}
+  <form id="light-form" class="wrap" style="width:100%">
+    <section class="panel">
+      <div class="row" style="align-items:center"><div class="step" style="flex:1 1 auto"><i>1</i><h2>The board</h2></div><span class="code lg" style="flex:0 0 auto">${esc(code)}</span></div>
+      <div id="link-area">${linkArea()}</div>
+    </section>
+    <section class="panel">
+      <div class="step"><i>2</i><h2>Details <span class="badge">optional</span></h2></div>
+      <label class="f">Where is it?<input id="f-loc" value="${esc(l.location)}" placeholder="Optional, e.g. L4 toilets, 2nd downlight"></label>
+      <label class="f">Fitting type<select id="f-type"><option value="">Not set</option>${DB.types.map(t=>`<option value="${t.id}" ${t.id===l.type?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
+      ${DB.types.length?"":`<p class="note">No fitting types yet. Add them from the home screen.</p>`}
+      <div id="ph-lightPhotos">${photos(draft.lightPhotos,"lightPhotos",{edit:true})}</div>
+      ${addPhoto("lightPhotos","+ Photo of the light")}
+      <label class="f">This light's driver, if different from its type<input id="f-drv" value="${esc(l.driverModel)}" placeholder="Optional"></label>
+      <label class="f">Where is this light's driver?<input id="f-drvloc" value="${esc(l.driverLocation)}" placeholder="e.g. Inside the fitting, or above the tile 1m east"></label>
+      <div id="ph-driverPhotos">${photos(draft.driverPhotos,"driverPhotos",{edit:true})}</div>
+      ${addPhoto("driverPhotos","+ Photo of the driver or where it is")}
+      <div class="row"><label class="f">CB number<input id="f-cb" inputmode="numeric" value="${esc(l.cb)}" placeholder="Optional"></label>
+        <label class="f">Phase<select id="f-phase">${["","L1","L2","L3"].map(p=>`<option ${p===l.phase?"selected":""}>${p}</option>`).join("")}</select></label></div>
+      <div id="ph-cbPhotos">${photos(draft.cbPhotos,"cbPhotos",{edit:true})}</div>
+      ${addPhoto("cbPhotos","+ Photo of the breaker")}
+    </section>
+    <section class="panel">
+      <label class="f">Notes<textarea id="f-notes" placeholder="Anything the next person should know">${esc(l.notes)}</textarea></label>
+      ${ex?"":`<label class="f">What did you do today?<input id="f-job" placeholder="e.g. Replaced driver"></label>`}
+      <button class="primary">${ex?"Save changes":"Save light "+esc(code)}</button>
+    </section>
+  </form>`;
+},
+qr(code){
+  const isB=!!board(code), r=isB?board(code):light(code);
+  return `${back(isB?"board":"light",code)}
+  <section class="panel">
+    <h2>Replacement tag ${esc(code)}</h2>
+    <p class="muted">Use this if the tag on ${isB?"the board":"the light"} has gone missing or been painted over.</p>
+    ${printButtons()}
+  </section>
+  <section class="panel big" id="print-area">${sheetHTML(+code,1)}</section>`;
+},
+make(){
+  return `${back()}
+  <section class="panel">
+    <h2>Make QR tags</h2>
+    <p class="muted">Blank tags: a QR code and a number. Use them on boards or lights, you decide when you scan one. Works with no internet.</p>
+    <div class="row">
+      <label class="f">First number<input id="m-start" inputmode="numeric" value="${nextNumber()}"></label>
+      <label class="f">How many (40 per page)<select id="m-count">${[20,40,80,120].map(n=>`<option ${n===40?"selected":""}>${n}</option>`).join("")}</select></label>
+    </div>
+    <p class="note" id="m-warn"></p>
+    ${printButtons()}
+  </section>
+  <section class="panel" id="print-area"></section>`;
+},
+data(){
+  const n=DB.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos.length+t.driverPhotos.length,0)+DB.boards.reduce((a,b)=>a+b.photos.length,0);
+  return `${back()}
+  <section class="panel"><h2>Backup &amp; restore</h2>
+  <p class="muted">Everything is stored on this phone only. Save a backup now and then, and use it to move the records to another phone.</p>
+  <button class="primary" id="export">Save backup file</button>
+  <label class="btn">Restore from backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
+  <p class="note">${DB.lights.length} lights, ${DB.boards.length} boards, ${n} photos stored.</p></section>`;
+}
+};
+function linkArea(){
+  const b=board(draft.board);
+  if(b) return `<div class="linked"><span class="code">${b.code}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.location)}</span></span><button type="button" id="unlink">Change</button></div>`;
+  return `<p class="muted">Go to the board this light runs from and scan its tag.</p>
+    <button type="button" class="primary" id="link-scan">Scan the board's tag</button>
+    <div class="lookup"><input id="link-num" inputmode="numeric" placeholder="or type board tag no." aria-label="Board tag number" style="font-size:18px"><button type="button" id="link-type">Link</button></div>
+    ${DB.boards.length?`<label class="f">Or pick it<select id="link-pick"><option value="">Choose a board…</option>${DB.boards.map(b=>`<option value="${b.code}">${esc(b.name)} (${b.code}), ${esc(b.location)}</option>`).join("")}</select></label>`:""}`;
+}
+function linkBoard(code){
+  if(board(code)){
+    if(view.name==="linkLight"){ const rec={...draft,board:code,history:[{d:today(),t:"Tagged."}]}; DB.lights.push(rec); save(); toast(`Light ${rec.code} linked to ${board(code).name}`); return go("light",rec.code); }
+    if(view.name==="editLight"){ draft.board=code; $("#link-area").innerHTML=linkArea(); toast(`Linked to ${board(code).name}. Now add the CB number.`); $("#f-cb")?.focus(); }
+    else { const l=light(view.arg); l.board=code; save(); toast(`Linked to ${board(code).name}. Add the CB number.`); go("editLight",l.code); }
+    return;
+  }
+  if(light(code)) return toast(`${code} is a light tag. Scan the tag on the board.`);
+  toast(`${code} isn't set up as a board yet. Tap "Save, link later", then set up that board.`);
+}
+function render(){ renderHeader(); $("#app").innerHTML=V[view.name](view.arg); if(view.name==="make") updateSheet(); }
+function refreshPhotos(key){ const el=$("#ph-"+key); if(el) el.innerHTML=photos(draft[key],key,{edit:true}); }
+
+/* ---------- search ---------- */
+function search(q){
+  q=q.trim().toLowerCase(); if(!q) return [];
+  const cbm=q.match(/^cb\s*(\d+)$/), words=q.split(/\s+/);
+  const ls=DB.lights.filter(t=>{
+    const b=board(t.board)||{};
+    if(cbm) return t.cb===cbm[1];
+    if(/^\d+$/.test(q)) return t.code.startsWith(q);
+    const hay=[t.code,t.location,t.fitting,ftype(t.type)?.name,ftype(t.type)?.driverModel,t.notes,t.driverModel,t.driverLocation,b.name,b.location,"cb "+t.cb,"cb"+t.cb].join(" ").toLowerCase();
+    return words.every(w=>hay.includes(w));
+  }).map(lightItem);
+  const bs=cbm?[]:DB.boards.filter(b=>/^\d+$/.test(q)?b.code.startsWith(q):words.every(w=>[b.code,b.name,b.location,b.fedFrom,b.notes].join(" ").toLowerCase().includes(w))).map(boardItem);
+  return [...bs,...ls].slice(0,25);
+}
+function showResults(){
+  const q=$("#lookup").value, el=$("#results"), r=search(q);
+  if(!q.trim()){ el.hidden=true; return; }
+  el.hidden=false;
+  const d=normalise(q), isNum=/^\s*\d+\s*$/.test(q), blank=isNum&&!light(d)&&!board(d);
+  el.innerHTML = r.join("") + (blank ? `<button class="item" data-open="${d}"><span class="code">${d}</span><span class="t"><b>Set up tag ${d}</b><span>Blank tag</span></span></button>` : "") || `<div class="empty">Nothing matches "${esc(q)}".</div>`;
+}
+
+/* ---------- QR tag sheets ---------- */
+const FRAMED=(()=>{ try{ return window.self!==window.top; }catch{ return true; } })();
+const CAN_SHARE=(()=>{ try{ return !FRAMED && !!navigator.canShare && navigator.canShare({files:[new File(["x"],"t.pdf",{type:"application/pdf"})]}); }catch{ return false; } })();
+const qrText = n => "LIGHT TRACER "+n;
+function nextNumber(){ return Math.max(1000, DB.lastPrinted||0, ...DB.lights.map(t=>+t.code||0), ...DB.boards.map(b=>+b.code||0)) + 1; }
+function sheetHTML(start,count){
+  let h=`<div class="sheet">`;
+  for(let n=start;n<start+count;n++) h+=`<div class="tagl">${QR.svg(qrText(n))}<span class="n">${n}</span></div>`;
+  return h+`</div>`;
+}
+function printButtons(){
+  return `<div class="row"><button class="primary" id="dl-pdf">Download PDF</button>${CAN_SHARE?`<button id="share-pdf">Email or share</button>`:""}${FRAMED?"":`<button id="print">Print</button>`}</div>
+  <p class="note">A4 PDF, ready to print. ${CAN_SHARE?"Email or share opens your phone's share sheet: Mail, AirDrop, Print or Files.":FRAMED?"On iPhone the download opens the share sheet, where you can pick Mail.":"Email the downloaded PDF from your Files app."}</p>`;
+}
+function sheetRange(){
+  if(view.name==="qr") return [+view.arg,1];
+  return [parseInt($("#m-start").value,10)||nextNumber(), +$("#m-count").value];
+}
+function updateSheet(){
+  const [s,c]=sheetRange(), inR=x=>+x.code>=s&&+x.code<s+c, used=[...DB.boards.filter(inR),...DB.lights.filter(inR)].map(x=>x.code).sort();
+  $("#print-area").innerHTML=sheetHTML(s,c);
+  $("#m-warn").textContent = used.length ? `Already in use: ${used.join(", ")}. Pick a different first number unless you're replacing those tags.` : `Tags ${s} to ${s+c-1}.`;
+}
+function markPrinted(){ const [s,c]=sheetRange(); if(view.name==="make"){ DB.lastPrinted=Math.max(DB.lastPrinted||0,s+c-1); save(); } }
+function drawPage(start,count){
+  const W=1240,H=1754,cols=5,rows=8,mx=50,my=60,cw=(W-2*mx)/cols,ch=(H-my-50)/rows;
+  const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,W,H); 
+  for(let i=0;i<count;i++){
+    const n=start+i, x=mx+(i%cols)*cw, y=my+Math.floor(i/cols)*ch;
+    g.setLineDash([8,6]); g.strokeStyle="#999"; g.lineWidth=2; g.strokeRect(x+8,y+8,cw-16,ch-16); g.setLineDash([]);
+    const q=QR.encode(qrText(n)), m=Math.floor(152/(q.size+8)), qs=m*(q.size+8), qx=Math.round(x+(cw-qs)/2), qy=Math.round(y+20);
+    g.fillStyle="#000"; for(let yy=0;yy<q.size;yy++) for(let xx=0;xx<q.size;xx++) if(q.dark(xx,yy)) g.fillRect(qx+(xx+4)*m,qy+(yy+4)*m,m,m);
+    g.textAlign="center"; g.font="bold 36px 'Courier New', monospace"; g.fillText(String(n),x+cw/2,qy+qs+30); g.textAlign="left";
+  }
+  return c;
+}
+async function makePDF(){
+  const [start,count]=sheetRange(), per=40, pages=[];
+  for(let p=0;p*per<count;p++){
+    const c=drawPage(start+p*per,Math.min(per,count-p*per));
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",.95));
+    pages.push({bytes:new Uint8Array(await b.arrayBuffer()),w:c.width,h:c.height});
+  }
+  const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+  const add=x=>{ const u=typeof x==="string"?enc.encode(x):x; parts.push(u); len+=u.length; };
+  const obj=(id,body)=>{ offs[id]=len; add(`${id} 0 obj\n`); body(); add(`\nendobj\n`); };
+  add("%PDF-1.4\n");
+  const n=pages.length, kids=pages.map((_,i)=>`${3+i*3} 0 R`).join(" ");
+  obj(1,()=>add("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2,()=>add(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
+  pages.forEach((pg,i)=>{
+    const pid=3+i*3, cid=pid+1, iid=pid+2, cs=`q 595.28 0 0 841.89 0 0 cm /Im0 Do Q`;
+    obj(pid,()=>add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    obj(cid,()=>add(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
+    obj(iid,()=>{ add(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`); add(pg.bytes); add("\nendstream"); });
+  });
+  const total=3+n*3, xref=len;
+  add(`xref\n0 ${total}\n0000000000 65535 f \n`+offs.slice(1).map(o=>String(o).padStart(10,"0")+" 00000 n \n").join(""));
+  add(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts,{type:"application/pdf"});
+}
+const pdfName=()=>{ const [s,c]=sheetRange(); return c===1?`light-tracer-tag-${s}.pdf`:`light-tracer-tags-${s}-${s+c-1}.pdf`; };
+async function downloadPDF(){
+  const blob=await makePDF(), name=pdfName();
+  if(FRAMED){
+    const d=await window.claude?.use?.("downloads");
+    if(!d){ toast("Downloads aren't available here. Use the installed app."); return; }
+    try{ await d.save({filename:name,data:blob}); markPrinted(); toast("PDF saved"); }
+    catch(e){ if(e?.code!=="declined") toast("Couldn't save the PDF here. Try the installed app."); }
+    return;
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); markPrinted(); toast("PDF saved");
+}
+async function sharePDF(){
+  const blob=await makePDF(), file=new File([blob],pdfName(),{type:"application/pdf"});
+  try{ await navigator.share({files:[file],title:"Light Tracer QR tags"}); markPrinted(); }
+  catch(e){ if(e?.name!=="AbortError") toast("Couldn't open sharing. Use Download PDF instead."); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
+  if(!t) return;
+  if(t.dataset.go) return go(t.dataset.go,t.dataset.arg);
+  if(t.dataset.type) return go("type",t.dataset.type);
+  if(t.dataset.pick){ if(idState) idState.picked=t.dataset.pick; return go("type",t.dataset.pick); }
+  if(t.dataset.open) return open(t.dataset.open);
+  if(t.dataset.view!==undefined){ $("#viewer-img").src=t.src; $("#viewer").hidden=false; return; }
+  if((t.dataset.del||EDIT_IDS.has(t.id)) && needEdit()) return;
+  if(t.dataset.del){ if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Remove"; return; } const [k,i]=t.dataset.del.split(":"); draft[k].splice(+i,1); refreshPhotos(k); if(view.name==="board"){ board(view.arg).photos=draft.photos; await save(); } if(view.name==="light"){ light(view.arg)[k]=draft[k]; await save(); } if(view.name==="type"){ ftype(view.arg)[k]=draft[k]; await save(); } return; }
+  switch(t.id){
+    case "home-btn": return go("home");
+    case "mode-btn": return !AUTH ? go("settings") : unlocked ? lockNow() : askUnlock(()=>render());
+    case "unlock": return askUnlock(()=>render());
+    case "lock-cancel": return closeLock();
+    case "pw-remove": {
+      if(!checkPw($("#pw-off").value)) return toast("That password isn't right.");
+      await setPw(null); unlocked=false; toast("Password removed. Anyone can edit now."); return go("home");
+    }
+    case "scan": return scan();
+    case "identify": return $("#id-input").click();
+    case "learn-yes": { const T=ftype(view.arg); if(idState&&!T.photos.includes(idState.photo)){ T.photos.push(idState.photo); if(T.photos.length>15) T.photos.splice(0,1); await save(); } toast(`Saved your photo to ${T.name}`); idState=null; return render(); }
+    case "learn-no": idState=null; return render();
+    case "del-type": {
+      if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to delete"; return; }
+      DB.lights.forEach(l=>{ if(l.type===view.arg) l.type=""; }); DB.types=DB.types.filter(x=>x.id!==view.arg); await save(); toast("Fitting type deleted"); return go("home");
+    }
+    case "scan-cancel": return stopScan();
+    case "scan-photo": { const c=scanCallback; stopScan(); return photoScan(c); }
+    case "link-scan": return scan(linkBoard);
+    case "link-type": { const c=normalise($("#link-num").value); return c?linkBoard(c):toast("Type the number on the board's tag."); }
+    case "assign-scan": return scan(c=>{ if(light(c)||board(c)) return toast(`Tag ${c} is already in use. Use a blank tag.`); $("#b-code").value=c; toast(`Tag ${c} will be this board's tag`); });
+    case "save-unlinked": { DB.lights.push({...draft,history:[{d:today(),t:"Tagged."}]}); await save(); toast(`Light ${draft.code} saved. Link it when you get to the board.`); return go("light",draft.code); }
+    case "unlink": draft.board=""; $("#link-area").innerHTML=linkArea(); return;
+    case "print": markPrinted(); window.print(); return;
+    case "dl-pdf": return downloadPDF();
+    case "share-pdf": return sharePDF();
+    case "clear-ex":
+      if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to clear"; return; }
+      DB={v:3,boards:[],lights:[],types:[],lastPrinted:DB.lastPrinted}; await save(); toast("Example data cleared"); return go("home");
+    case "del": {
+      if(view.name==="board"){ const n=DB.lights.filter(l=>l.board===view.arg).length; if(n){ toast(`${n} light${n>1?"s are":" is"} linked to this board. Link ${n>1?"them":"it"} to another board or delete ${n>1?"them":"it"} first.`); return; } }
+      if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to delete"; return; }
+      if(view.name==="board") DB.boards=DB.boards.filter(b=>b.code!==view.arg); else DB.lights=DB.lights.filter(l=>l.code!==view.arg);
+      await save(); toast(`Tag ${view.arg} deleted. It's blank again.`); return go("home");
+    }
+    case "export":
+      try{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:"application/json"})); a.download=`light-tracer-backup-${today()}.json`; a.click(); toast("Backup saved to your Files"); }
+      catch{ toast("Couldn't save a backup here. Use the installed app."); }
+  }
+});
+/* buttons that change records; they're hidden when locked, this is the backstop */
+const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export"]);
+$("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
+$("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hidden) closeLock(); $("#viewer").hidden=true; } });
+["pointerdown","keydown","input"].forEach(ev=>document.addEventListener(ev,()=>{ checkIdle(); lastAct=Date.now(); },{capture:true,passive:true}));
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkIdle(); });
+setInterval(checkIdle,30000);
+document.addEventListener("input",e=>{ if(e.target.id==="lookup") showResults(); if(e.target.id==="m-start") updateSheet(); });
+
+document.addEventListener("submit",async e=>{
+  e.preventDefault(); const f=e.target;
+  if(f.id==="lock-form"){
+    if(checkPw($("#lock-pw").value)){
+      const then=afterUnlock; unlocked=true; lastAct=Date.now(); closeLock(); toast("Editing unlocked");
+      return then ? then() : render();
+    }
+    $("#lock-err").hidden=false; $("#lock-pw").select(); f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake"); return;
+  }
+  if(f.id==="pw-form"){
+    const n=$("#pw-new").value, n2=$("#pw-new2").value;
+    if(AUTH && !checkPw($("#pw-cur").value)) return toast("The current password isn't right.");
+    if(n.length<4) return toast("Use at least 4 characters.");
+    if(n!==n2) return toast("The two new passwords don't match.");
+    const first=!AUTH; await setPw(n); unlocked=true; lastAct=Date.now();
+    toast(first?"Password set. The app now opens in view-only mode.":"Password changed"); return go("home");
+  }
+  if(f.id!=="lookup-form" && needEdit()) return;
+  if(f.id==="lookup-form"){
+    const q=$("#lookup").value;
+    if(/^\s*\d+\s*$/.test(q)) return open(normalise(q));
+    return showResults();
+  }
+  if(f.id==="log-form"){ const v=$("#log-text").value.trim(); if(!v) return; light(view.arg).history.push({d:today(),t:v}); await save(); toast("Logged"); return render(); }
+  if(f.id==="board-form"){
+    if(!draft.code){ const c=normalise($("#b-code").value); if(!c) return toast("Scan or type the board's tag number."); if(light(c)||board(c)) return toast(`Tag ${c} is already in use. Use a blank tag.`); draft.code=c; }
+    const rec={...draft,name:$("#b-name").value.trim(),location:$("#b-loc").value.trim(),fedFrom:$("#b-fed").value.trim(),notes:$("#b-notes").value.trim()};
+    const i=DB.boards.findIndex(b=>b.code===rec.code); if(i<0) DB.boards.push(rec); else DB.boards[i]=rec;
+    await save(); toast(i<0?`Board ${rec.code} saved`:"Saved"); return go("board",rec.code);
+  }
+  if(f.id==="type-form"){
+    const rec={...draft,name:$("#t-name").value.trim(),driverModel:$("#t-drv").value.trim(),driverLocation:$("#t-drvloc").value.trim(),notes:$("#t-notes").value.trim()};
+    const i=DB.types.findIndex(x=>x.id===rec.id); if(i<0) DB.types.push(rec); else DB.types[i]=rec;
+    idState=null; await save(); toast("Fitting type saved"); return go("type",rec.id);
+  }
+  if(f.id==="light-form"){
+    const rec={...draft,cb:$("#f-cb").value.trim(),phase:$("#f-phase").value,location:$("#f-loc").value.trim(),type:$("#f-type").value,fitting:ftype($("#f-type").value)?.name||"",notes:$("#f-notes").value.trim(),driverModel:$("#f-drv").value.trim(),driverLocation:$("#f-drvloc").value.trim()};
+    const i=DB.lights.findIndex(l=>l.code===rec.code);
+    if(i<0){ rec.history=[{d:today(),t:$("#f-job").value.trim()||"Tagged."}]; DB.lights.push(rec); } else DB.lights[i]=rec;
+    await save(); toast("Saved"); return go("light",rec.code);
+  }
+});
+
+document.addEventListener("change",async e=>{
+  const t=e.target;
+  if(t.id==="m-count"){ updateSheet(); return; }
+  if((t.id==="link-pick"&&t.value || t.dataset.add || t.id==="import") && needEdit()){ t.value=""; return; }
+  if(t.id==="link-pick"&&t.value){ linkBoard(t.value); return; }
+  if(t.dataset.add){
+    const k=t.dataset.add;
+    for(const file of t.files){ try{ draft[k].push(await resizeImage(file)); }catch{ toast("Couldn't read that photo."); } }
+    refreshPhotos(k); t.value="";
+    if(view.name==="board"){ board(view.arg).photos=draft.photos; await save(); }
+    if(view.name==="light"){ light(view.arg)[k]=draft[k]; await save(); toast("Photo saved"); }
+    if(view.name==="type"){ ftype(view.arg)[k]=draft[k]; await save(); toast("Photo saved"); }
+  }
+  if(t.id==="id-input" && t.files[0]){ const file=t.files[0]; t.value=""; try{ await identifyPhoto(file); }catch{ toast("Couldn't read that photo."); } return; }
+  if(t.id==="scan-input" && t.files[0]){
+    const cb=scanCallback; scanCallback=null;
+    try{
+      const img=new Image(); img.src=await resizeImage(t.files[0],2400); await img.decode();
+      const c=document.createElement("canvas"); c.width=img.width; c.height=img.height; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0);
+      let text=null;
+      if("BarcodeDetector" in window){ try{ const r=await new BarcodeDetector({formats:["qr_code"]}).detect(c); text=r[0]?.rawValue; }catch{} }
+      if(!text){ try{ text=QRDecode.fromSource(c); }catch{} }
+      if(!text && window.jsQR){ const d=ctx.getImageData(0,0,c.width,c.height); text=jsQR(d.data,c.width,c.height)?.data; }
+      if(text) gotTag(text,cb); else toast("Couldn't read the QR code. Fill more of the photo with the tag, or type the number.");
+    }catch{ toast("Couldn't read that photo."); }
+    t.value="";
+  }
+  if(t.id==="import" && t.files[0]){
+    try{ const j=tidy(migrate(JSON.parse(await t.files[0].text()))); if(!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0; DB=j; await save(); toast("Backup restored"); go("home"); }
+    catch{ toast("That file isn't a Light Tracer backup."); }
+  }
+});
+
+(async()=>{
+  AUTH=await loadKV("auth");
+  DB=tidy(migrate(await loadData())||seed()); await save(); render();
+  try{ navigator.storage?.persist?.(); }catch{}
+  try{ if("serviceWorker" in navigator && location.protocol==="https:" && !/claude/.test(location.hostname)) navigator.serviceWorker.register("sw.js"); }catch{}
+})();
+</script>
