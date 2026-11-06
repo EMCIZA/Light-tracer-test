@@ -136,6 +136,10 @@ button>svg,.btn>svg{width:18px;height:18px;flex:0 0 auto}
 .hero{background:linear-gradient(140deg,var(--hero1),var(--hero2));border:0;color:#fff;box-shadow:0 14px 30px -14px rgba(79,70,229,.7)}
 .hero h1,.hero h2{color:#fff}
 .hero .note{color:rgba(255,255,255,.85)}
+.hero .supply{color:var(--ink)}
+.hero button.primary{background:#fff;border-color:#fff;color:#4338ca}
+.hero button:not(.primary):not(.big):not(.item){background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35);color:#fff}
+.hero .hist .code{color:var(--label-ink)}
 .hello{font-size:14px;font-weight:600;color:rgba(255,255,255,.8)}
 button.big{font-size:19px;padding:17px 16px;border-radius:14px}
 .hero button.big{background:#fff;border-color:#fff;color:#4338ca;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
@@ -553,7 +557,7 @@ const Match=(()=>{
 </script>
 <script>
 /* App version: bump with every published change, so phones can be compared at a glance. */
-const APP_VERSION="0.13", APP_DATE="2026-11-06", APP_CHANNEL="Test";
+const APP_VERSION="0.14", APP_DATE="2026-11-06", APP_CHANNEL="Test";
 const versionText = () => `Version ${APP_VERSION}${APP_CHANNEL?` (${APP_CHANNEL.toLowerCase()})`:""} · ${fmtDate(APP_DATE)}`;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -771,6 +775,8 @@ const ICON={
   lock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`),
   unlock:svgI(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>`),
   share:svgI(`<path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/>`),
+  copy:svgI(`<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>`),
+  paste:svgI(`<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h4"/>`),
   home:svgI(`<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>`),
   more:svgI(`<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>`),
   gear:svgI(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>`)
@@ -808,7 +814,7 @@ async function identifyPhoto(file){
   ranked.sort((a,b)=>b.score-a.score);
   idState={photo,ranked}; $("#toast").hidden=true; go("identify");
 }
-function boardItem(b){ return `<button class="item" data-open="${b.code}"><span class="code">${b.code}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.location)}</span></span><span class="cb">${DB.lights.filter(l=>l.board===b.code).length} lights</span></button>`; }
+function boardItem(b){ return `<button class="item" data-open="${b.code}"><span class="code">${b.code}</span><span class="t"><b>${esc(b.name)}</b><span>${esc(b.location)}</span></span><span class="cb">${plural(DB.lights.filter(l=>l.board===b.code).length,"light")}</span></button>`; }
 
 const V={
 home(){
@@ -1143,6 +1149,13 @@ data(){
   ${CAN_SHARE_JSON?`<button class="primary" id="share-backup">${ICON.share} Share backup</button>`:""}
   <button ${CAN_SHARE_JSON?"":`class="primary" `}id="export">${ICON.backup} Save backup file</button>
   </section>
+  <section class="panel"><h2>Copy &amp; paste through Teams</h2>
+  <p class="muted">For phones that can't save files. Copies your records as text to paste into a Teams message. On the other phone, copy the message and tap Paste records.</p>
+  <p class="note">Text only: lights, boards, breakers, fitting types, notes and job history. Photos are too big for a message, so they stay on each phone.</p>
+  <button class="primary" id="copy-text">${ICON.copy} Copy records</button>
+  <button id="paste-text">${ICON.paste} Paste records</button>
+  <div id="paste-box" hidden><label class="f">Couldn't read what you copied automatically. Press and hold in the box, tap Paste, then tap Check.<textarea id="paste-area" rows="4" placeholder="Paste here"></textarea></label><button id="paste-check">Check</button></div>
+  </section>
   <section class="panel"><h2>Add from a backup file</h2>
   <p class="muted">Pick a backup file from another phone. You'll see what's in it before anything changes.</p>
   <label class="btn">Choose backup file<input type="file" id="import" accept=".json,application/json" hidden></label>
@@ -1207,16 +1220,44 @@ const photoCount = d => d.lights.reduce((a,t)=>a+t.cbPhotos.length+t.lightPhotos
 const backupName = () => `light-tracer-backup-${today()}.json`;
 const backupBlob = () => new Blob([JSON.stringify({...DB,savedAt:new Date().toISOString()})],{type:"application/json"});
 let IMP=null, REPORT=null;
+/* records as text for Teams: no photos, gzip-compressed, base64. Starts with LIGHTTRACER1: so it can be recognised when pasted. */
+const TEXT_TAG="LIGHTTRACER1:";
+function withoutPhotos(d){
+  const c=JSON.parse(JSON.stringify(d));
+  c.lights.forEach(l=>{ l.cbPhotos=[]; l.lightPhotos=[]; l.driverPhotos=[]; });
+  c.boards.forEach(b=>{ b.photos=[]; (b.breakers||[]).forEach(k=>k.photos=[]); });
+  (c.types||[]).forEach(t=>{ t.photos=[]; t.driverPhotos=[]; });
+  c.noPhotos=true; c.savedAt=new Date().toISOString(); delete c.lastLink; delete c.batches;
+  return c;
+}
+const b64 = bytes => { let s=""; for(let i=0;i<bytes.length;i+=0x8000) s+=String.fromCharCode(...bytes.subarray(i,i+0x8000)); return btoa(s); };
+async function recordsText(){
+  const json=JSON.stringify(withoutPhotos(DB));
+  if(!("CompressionStream" in window)) return json;
+  const out=new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
+  return TEXT_TAG+b64(out);
+}
+async function parseRecordsText(txt){
+  txt=String(txt||"").trim(); const i=txt.indexOf(TEXT_TAG);
+  if(i>=0){
+    const raw=atob(txt.slice(i+TEXT_TAG.length).replace(/[^A-Za-z0-9+/=]/g,"")), bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+    txt=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+  const j=JSON.parse(txt.slice(txt.indexOf("{")));
+  if(!j||!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0;
+  return j;
+}
+function showImport(j){ IMP={data:tidy(migrate(j))}; REPORT=null; render(); $("#imp")?.scrollIntoView({block:"start"}); }
 function importPanel(){
   const d=IMP.data, n=photoCount(d), when=d.savedAt?new Date(d.savedAt).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  return `<section class="panel hero" id="imp"><h2>What's in this file</h2>
+  return `<section class="panel hero" id="imp"><h2>${d.noPhotos?"What you pasted":"What's in this file"}</h2>
   <div class="supply"><div><div class="k">Lights</div><div class="v">${d.lights.length}</div></div><div><div class="k">Boards</div><div class="v">${d.boards.length}</div></div>
-    <div><div class="k">Fitting types</div><div class="v">${d.types.length}</div></div><div><div class="k">Photos</div><div class="v">${n}</div></div>
+    <div><div class="k">Fitting types</div><div class="v">${d.types.length}</div></div><div><div class="k">Photos</div><div class="v">${d.noPhotos?`<span class="v small">Not included</span>`:n}</div></div>
     ${when?`<div class="wide"><div class="k">Saved</div><div class="v small">${esc(when)}</div></div>`:""}</div>
   <p class="note"><b>Merge</b> adds new records and updates ones changed more recently on the other phone. Photos and job history from both are kept. Records deleted on the other phone are deleted here too.</p>
   <button class="primary" id="imp-merge">Merge into this phone</button>
-  <p class="note"><b>Replace</b> deletes everything on this phone (${plural(DB.lights.length,"light")}, ${plural(DB.boards.length,"board")}, ${plural(photoCount(DB),"photo")}) and uses the file instead.</p>
-  <div class="row"><button id="imp-cancel">Cancel</button><button class="danger" id="imp-replace">Replace everything</button></div></section>`;
+  ${d.noPhotos?`<p class="note">Photos already on this phone are kept.</p><button id="imp-cancel">Cancel</button></section>`:`<p class="note"><b>Replace</b> deletes everything on this phone (${plural(DB.lights.length,"light")}, ${plural(DB.boards.length,"board")}, ${plural(photoCount(DB),"photo")}) and uses the file instead.</p>
+  <div class="row"><button id="imp-cancel">Cancel</button><button class="danger" id="imp-replace">Replace everything</button></div></section>`}`;
 }
 function reportPanel(){
   const r=REPORT;
@@ -1497,13 +1538,26 @@ document.addEventListener("click",async e=>{
     case "imp-replace":
       if(!t.dataset.sure){ t.dataset.sure=1; t.textContent="Tap again to replace"; return; }
       DB=IMP.data; IMP=null; REPORT=null; resnap(); await save(); toast("Replaced with the backup"); return go("home");
+    case "copy-text": {
+      try{ const txt=await recordsText(); await navigator.clipboard.writeText(txt); toast(`Copied (${Math.ceil(txt.length/1024)} KB). Paste it into Teams.`); }
+      catch{ toast("Couldn't copy here. Try the installed app."); }
+      return;
+    }
+    case "paste-text": {
+      try{ const txt=await navigator.clipboard.readText(); return showImport(await parseRecordsText(txt)); }
+      catch{ $("#paste-box").hidden=false; $("#paste-area").focus(); return; }
+    }
+    case "paste-check": {
+      try{ return showImport(await parseRecordsText($("#paste-area").value)); }
+      catch{ return toast("That isn't Light Tracer records. Copy the whole Teams message and try again."); }
+    }
     case "export":
       try{ const a=document.createElement("a"); a.href=URL.createObjectURL(backupBlob()); a.download=backupName(); a.click(); toast("Backup saved to your Files"); }
       catch{ toast("Couldn't save a backup here. Use the installed app."); }
   }
 });
 /* buttons that change records; they're hidden when locked, this is the backstop */
-const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","same-last","pick-skip","del-breaker"]);
+const EDIT_IDS=new Set(["del","del-type","clear-ex","save-unlinked","learn-yes","link-scan","link-type","unlink","assign-scan","export","share-backup","imp-merge","imp-replace","copy-text","paste-text","paste-check","same-last","pick-skip","del-breaker"]);
 $("#viewer").addEventListener("click",()=>$("#viewer").hidden=true);
 $("#lock").addEventListener("click",e=>{ if(e.target.id==="lock") closeLock(); });
 $("#notice").addEventListener("click",e=>{ if(e.target.id==="notice") $("#notice").hidden=true; });
@@ -1589,7 +1643,7 @@ document.addEventListener("change",async e=>{
     t.value="";
   }
   if(t.id==="import" && t.files[0]){
-    try{ const j=JSON.parse(await t.files[0].text()); if(!j||!Array.isArray(j.lights)||!Array.isArray(j.boards)) throw 0; IMP={data:tidy(migrate(j))}; REPORT=null; render(); $("#imp")?.scrollIntoView({block:"start"}); }
+    try{ showImport(await parseRecordsText(await t.files[0].text())); }
     catch{ toast("That file isn't a Light Tracer backup."); }
   }
 });
