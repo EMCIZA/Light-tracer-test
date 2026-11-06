@@ -1050,14 +1050,14 @@ make(){
   <section class="panel">
     <h2>Make QR tags</h2>
     <p class="muted">New tag numbers come from your shared online counter, so two phones can never print the same number. Only the numbers go online: no records, notes or photos.</p>
-    <label class="f">How many (40 per page)<select id="m-count">${[20,40,80,120].map(n=>`<option ${n===40?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="f">How many tags<select id="m-count">${[1,2,5,10,20,40,80,120,200].map(n=>`<option value="${n}" ${n===40?"selected":""}>${n===1?"1 tag":n+" tags"}${n===40?" (one A4 page)":""}</option>`).join("")}</select></label>
     <button class="primary" id="m-get">${ICON.tag} Get new tag numbers</button>
     <p class="note">Needs internet. Once you get numbers they're used for good, even if you don't print them.</p>
   </section>
-  ${B?`<section class="panel hero" id="m-batch"><h2>Tags ${B.first} to ${B.first+B.count-1}</h2><p class="note">These numbers are yours. Print them now, or reprint later from "Your tag batches".</p>${labelSection()}<h3>Or print on A4 paper</h3>${printButtons()}</section>
+  ${B?`<section class="panel hero" id="m-batch"><h2>${B.count===1?`Tag ${B.first}`:`Tags ${B.first} to ${B.first+B.count-1}`}</h2><p class="note">These numbers are yours. Print them now, or reprint later from "Your tag batches".</p>${labelSection()}<h3>Or print on A4 paper</h3>${printButtons()}</section>
   <section class="panel" id="print-area"></section>`:""}
   ${mine.length?`<section class="panel"><h3>Your tag batches</h3><p class="note">Numbers this phone has got. Tap one to print it again, for example if a sheet got lost.</p>
-    <div class="list">${mine.map(b=>`<button class="item" data-reprint="${b.first}:${b.last-b.first+1}"><span class="code">${b.first}</span><span class="t"><b>${b.first} to ${b.last}</b><span>${plural(b.last-b.first+1,"tag")}</span></span><span class="cb">${fmtDate(b.d)}</span></button>`).join("")}</div></section>`:""}`;
+    <div class="list">${mine.map(b=>`<button class="item" data-reprint="${b.first}:${b.last-b.first+1}"><span class="code">${b.first}</span><span class="t"><b>${b.first===b.last?b.first:`${b.first} to ${b.last}`}</b><span>${plural(b.last-b.first+1,"tag")}</span></span><span class="cb">${fmtDate(b.d)}</span></button>`).join("")}</div></section>`:""}`;
 },
 data(){
   const n=photoCount(DB);
@@ -1386,7 +1386,7 @@ document.addEventListener("click",async e=>{
         MAKE={first:r.first,count:r.last-r.first+1};
         DB.batches=[...(DB.batches||[]),{first:r.first,last:r.last,d:today()}].slice(-50);
         DB.lastPrinted=Math.max(DB.lastPrinted||0,r.last); await save();
-        render(); $("#m-batch")?.scrollIntoView({block:"start"}); toast(`Tags ${r.first} to ${r.last} are yours`);
+        render(); $("#m-batch")?.scrollIntoView({block:"start"}); toast(r.first===r.last?`Tag ${r.first} is yours`:`Tags ${r.first} to ${r.last} are yours`);
       }catch{ toast("Couldn't reach the tag counter. Check your internet and try again."); t.disabled=false; t.innerHTML=`${ICON.tag} Get new tag numbers`; }
       return;
     }
