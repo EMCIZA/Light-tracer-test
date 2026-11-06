@@ -1481,6 +1481,8 @@ document.addEventListener("change",async e=>{
   AUTH=await loadKV("auth");
   DB=tidy(migrate(await loadData())||seed()); resnap(); await save(); render();
   try{ navigator.storage?.persist?.(); }catch{}
-  try{ if("serviceWorker" in navigator && location.protocol==="https:" && !/claude/.test(location.hostname)) navigator.serviceWorker.register("sw.js"); }catch{}
+  try{ if("serviceWorker" in navigator && location.protocol==="https:" && !/claude/.test(location.hostname)) { const had=!!navigator.serviceWorker.controller; let reloaded=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(had&&!reloaded){ reloaded=true; location.reload(); } });
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update?.(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) r.update?.(); }); }); } }catch{}
 })();
 </script>
