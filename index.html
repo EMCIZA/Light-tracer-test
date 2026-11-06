@@ -119,6 +119,7 @@ label.f textarea{min-height:64px;resize:vertical}
 #scanner .scan-ui{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;color:#fff;text-align:center;font-weight:600}
 #scanner .scan-ui button{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
 .thumb{width:64px;height:48px;object-fit:cover;border-radius:5px;border:1px solid var(--line);flex:0 0 auto;background:var(--bg)}
+.version{text-align:center;font-size:13px;color:var(--muted);margin:4px 0 0}
 .cbchip{font-family:var(--mono);font-weight:700;font-size:14px;background:var(--ink);color:var(--surface);border-radius:6px;padding:3px 8px;white-space:nowrap;flex:0 0 auto}
 .cbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .cbgrid button{flex-direction:column;align-items:flex-start;gap:2px;padding:12px;text-align:left;min-width:0}
@@ -551,6 +552,9 @@ const Match=(()=>{
 })();
 </script>
 <script>
+/* App version: bump with every published change, so phones can be compared at a glance. */
+const APP_VERSION="0.13", APP_DATE="2026-11-06", APP_CHANNEL="Test";
+const versionText = () => `Version ${APP_VERSION}${APP_CHANNEL?` (${APP_CHANNEL.toLowerCase()})`:""} · ${fmtDate(APP_DATE)}`;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
@@ -840,7 +844,8 @@ home(){
   ${unlinked.length?`<section class="panel"><h3>Waiting for a board</h3><p class="note">These lights are tagged but not linked yet.${can()?" Open one and scan its board's tag.":""}</p><div class="list">${unlinked.map(lightItem).join("")}</div></section>`:""}
   <section class="panel"><h3>Recently worked on</h3>
     <div class="list">${recent.map(lightItem).join("")||`<div class="empty">No lights tagged yet. Scan a blank tag to start.</div>`}</div>
-  </section>`;
+  </section>
+  <p class="version">${versionText()}</p>`;
 },
 more(){
   const row=(attr,icon,c,title,sub)=>`<button class="item" ${attr}><span class="ic" style="--c:${c}">${icon}</span><span class="t"><b>${title}</b><span>${sub}</span></span><span class="cb">›</span></button>`;
@@ -849,7 +854,8 @@ more(){
     ${row(`data-go="data"`,ICON.backup,"#0d9488","Share &amp; backup","Send records to another phone")}
     ${row(`data-go="settings"`,ICON.key,"#db2777","Password",AUTH?"Change or remove":"Not set yet")}
     ${AUTH?(unlocked?row(`id="lock-now"`,ICON.lock,"#64748b","Lock editing","Back to view only"):row(`id="unlock"`,ICON.unlock,"#64748b","Unlock editing","Add, change or delete")):""}
-  </div></section>`;
+  </div></section>
+  <section class="panel"><h3>About</h3><p><b>Light Tracer</b></p><p class="muted">${versionText()}</p></section>`;
 },
 boards(){
   return `${back()}
