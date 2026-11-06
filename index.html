@@ -626,7 +626,7 @@ function migrate(d){
   out.lastPrinted=Math.max(out.lastPrinted,next-1);
   return out;
 }
-function tidy(d){ d.deleted=d.deleted||{}; d.boards.forEach(b=>{ b.photos=b.photos||[]; }); d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
+function tidy(d){ d.deleted=d.deleted||{}; d.batches=d.batches||[]; d.boards.forEach(b=>{ b.photos=b.photos||[]; }); d.types=d.types||[]; d.types.forEach(t=>{ t.photos=t.photos||[]; t.driverPhotos=t.driverPhotos||[]; }); (d.lights||[]).forEach(l=>{ l.type=l.type||""; l.driverPhotos=l.driverPhotos||[]; l.driverModel=l.driverModel||""; l.driverLocation=l.driverLocation||""; l.lightPhotos=l.lightPhotos||[]; l.cbPhotos=l.cbPhotos||[]; l.history=l.history||[]; }); return d; }
 const board = c => DB.boards.find(b=>b.code===c);
 const light = c => DB.lights.find(l=>l.code===c);
 const ftype = id => DB.types.find(t=>t.id===id);
@@ -681,6 +681,7 @@ function stopScan(){ clearTimeout(scanTimer); if(stream){ stream.getTracks().for
 let view={name:"home"}, draft=null;
 function go(name,arg){
   if(EDIT_VIEWS.has(name)&&!can()) return askUnlock(()=>go(name,arg));
+  if(name==="make") MAKE=null;
   view={name,arg}; render(); window.scrollTo(0,0);
 }
 const svgI = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -736,7 +737,7 @@ home(){
     tile(`data-go="boards"`,ICON.board,"Boards",plural(DB.boards.length,"board")),
     tile(`data-go="types"`,ICON.types,"Fitting types",plural(DB.types.length,"type")),
     ...(can()?[
-      tile(`data-go="make"`,ICON.tag,"Make QR tags","Print blank tags"),
+      tile(`data-go="make"`,ICON.tag,"Make QR tags","New numbers, never repeated"),
       tile(`data-go="data"`,ICON.backup,"Share &amp; backup","Send records to another phone"),
       tile(`data-go="settings"`,ICON.key,"Password",AUTH?"Change or remove":"Not set yet")
     ]:[ tile(`id="unlock"`,ICON.lock,"Unlock editing","Add, change or delete"," lock") ])
@@ -979,19 +980,19 @@ qr(code){
   <section class="panel big" id="print-area">${sheetHTML(+code,1)}</section>`;
 },
 make(){
+  const B=MAKE, mine=(DB.batches||[]).slice().reverse();
   return `${back()}
   <section class="panel">
     <h2>Make QR tags</h2>
-    <p class="muted">Blank tags: a QR code and a number. Use them on boards or lights, you decide when you scan one. Works with no internet.</p>
-    <div class="row">
-      <label class="f">First number<input id="m-start" inputmode="numeric" value="${nextNumber()}"></label>
-      <label class="f">How many (40 per page)<select id="m-count">${[20,40,80,120].map(n=>`<option ${n===40?"selected":""}>${n}</option>`).join("")}</select></label>
-    </div>
-    <p class="note" id="m-warn"></p>
-    <p class="note">Printing tags on more than one phone? Share and merge records first, so the numbers carry on from each other and don't repeat.</p>
-    ${printButtons()}
+    <p class="muted">New tag numbers come from your shared online counter, so two phones can never print the same number. Only the numbers go online: no records, notes or photos.</p>
+    <label class="f">How many (40 per page)<select id="m-count">${[20,40,80,120].map(n=>`<option ${n===40?"selected":""}>${n}</option>`).join("")}</select></label>
+    <button class="primary" id="m-get">${ICON.tag} Get new tag numbers</button>
+    <p class="note">Needs internet. Once you get numbers they're used for good, even if you don't print them.</p>
   </section>
-  <section class="panel" id="print-area"></section>`;
+  ${B?`<section class="panel hero" id="m-batch"><h2>Tags ${B.first} to ${B.first+B.count-1}</h2><p class="note">These numbers are yours. Print them now, or reprint later from "Your tag batches".</p>${printButtons()}</section>
+  <section class="panel" id="print-area"></section>`:""}
+  ${mine.length?`<section class="panel"><h3>Your tag batches</h3><p class="note">Numbers this phone has got. Tap one to print it again, for example if a sheet got lost.</p>
+    <div class="list">${mine.map(b=>`<button class="item" data-reprint="${b.first}:${b.last-b.first+1}"><span class="code">${b.first}</span><span class="t"><b>${b.first} to ${b.last}</b><span>${plural(b.last-b.first+1,"tag")}</span></span><span class="cb">${fmtDate(b.d)}</span></button>`).join("")}</div></section>`:""}`;
 },
 data(){
   const n=photoCount(DB);
@@ -1138,14 +1139,21 @@ function printButtons(){
 }
 function sheetRange(){
   if(view.name==="qr") return [+view.arg,1];
-  return [parseInt($("#m-start").value,10)||nextNumber(), +$("#m-count").value];
+  return MAKE?[MAKE.first,MAKE.count]:[nextNumber(),0];
 }
-function updateSheet(){
-  const [s,c]=sheetRange(), inR=x=>+x.code>=s&&+x.code<s+c, used=[...DB.boards.filter(inR),...DB.lights.filter(inR)].map(x=>x.code).sort();
-  $("#print-area").innerHTML=sheetHTML(s,c);
-  $("#m-warn").textContent = used.length ? `Already in use: ${used.join(", ")}. Pick a different first number unless you're replacing those tags.` : `Tags ${s} to ${s+c-1}.`;
+function updateSheet(){ const a=$("#print-area"); if(a&&MAKE) a.innerHTML=sheetHTML(MAKE.first,MAKE.count); }
+function markPrinted(){}
+/* ---------- shared tag counter (Supabase): hands out numbers no other phone has had.
+   Only tag numbers are stored online. The key is a public one: it can only ask for new numbers. ---------- */
+const SUPA={url:"https://hvalkwrfjocrmyjlbpof.supabase.co",key:"sb_publishable_gi01afwfh83drW_UK5NQDw_bsPt0wmS"};
+let MAKE=null;
+async function reserveTags(n){
+  const r=await fetch(SUPA.url+"/rest/v1/rpc/reserve_tags",{method:"POST",headers:{apikey:SUPA.key,"Content-Type":"application/json"},body:JSON.stringify({how_many:n,at_least:nextNumber()})});
+  if(!r.ok) throw new Error("counter "+r.status);
+  const j=await r.json(), row=Array.isArray(j)?j[0]:j;
+  if(!row||!(+row.first_number>0)) throw new Error("counter reply");
+  return {first:+row.first_number,last:+row.last_number};
 }
-function markPrinted(){ const [s,c]=sheetRange(); if(view.name==="make"){ DB.lastPrinted=Math.max(DB.lastPrinted||0,s+c-1); save(); } }
 function drawPage(start,count){
   const W=1240,H=1754,cols=5,rows=8,mx=50,my=60,cw=(W-2*mx)/cols,ch=(H-my-50)/rows;
   const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d");
@@ -1204,8 +1212,9 @@ async function sharePDF(){
 
 /* ---------- events ---------- */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
+  const t=e.target.closest("[data-reprint],[data-go],[data-open],[data-view],[data-del],[data-type],[data-pick],button[id]");
   if(!t) return;
+  if(t.dataset.reprint){ const [f,c]=t.dataset.reprint.split(":").map(Number); MAKE={first:f,count:c}; render(); return $("#m-batch")?.scrollIntoView({block:"start"}); }
   if(t.dataset.go) return go(t.dataset.go,t.dataset.arg);
   if(t.dataset.type) return go("type",t.dataset.type);
   if(t.dataset.pick){ if(idState) idState.picked=t.dataset.pick; return go("type",t.dataset.pick); }
@@ -1251,6 +1260,18 @@ document.addEventListener("click",async e=>{
       DB.deleted[view.arg]=Date.now();
       await save(); toast(`Tag ${view.arg} deleted. It's blank again.`); return go("home");
     }
+    case "m-get": {
+      if(navigator.onLine===false) return toast("No internet. Getting new tag numbers needs a connection.");
+      t.disabled=true; t.textContent="Getting numbers…";
+      try{
+        const r=await reserveTags(+$("#m-count").value);
+        MAKE={first:r.first,count:r.last-r.first+1};
+        DB.batches=[...(DB.batches||[]),{first:r.first,last:r.last,d:today()}].slice(-50);
+        DB.lastPrinted=Math.max(DB.lastPrinted||0,r.last); await save();
+        render(); $("#m-batch")?.scrollIntoView({block:"start"}); toast(`Tags ${r.first} to ${r.last} are yours`);
+      }catch{ toast("Couldn't reach the tag counter. Check your internet and try again."); t.disabled=false; t.innerHTML=`${ICON.tag} Get new tag numbers`; }
+      return;
+    }
     case "share-backup":
       try{ await navigator.share({files:[new File([backupBlob()],backupName(),{type:"application/json"})],title:"Light Tracer backup"}); }
       catch(e){ if(e?.name!=="AbortError") toast("Couldn't open sharing. Use Save backup file instead."); }
@@ -1274,7 +1295,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#lock").hi
 ["pointerdown","keydown","input"].forEach(ev=>document.addEventListener(ev,()=>{ checkIdle(); lastAct=Date.now(); },{capture:true,passive:true}));
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkIdle(); });
 setInterval(checkIdle,30000);
-document.addEventListener("input",e=>{ if(e.target.id==="lookup") showResults(); if(e.target.id==="m-start") updateSheet(); });
+document.addEventListener("input",e=>{ if(e.target.id==="lookup") showResults(); });
 
 document.addEventListener("submit",async e=>{
   e.preventDefault(); const f=e.target;
@@ -1321,7 +1342,6 @@ document.addEventListener("submit",async e=>{
 
 document.addEventListener("change",async e=>{
   const t=e.target;
-  if(t.id==="m-count"){ updateSheet(); return; }
   if((t.id==="link-pick"&&t.value || t.dataset.add || t.id==="import") && needEdit()){ t.value=""; return; }
   if(t.id==="link-pick"&&t.value){ linkBoard(t.value); return; }
   if(t.dataset.add){
